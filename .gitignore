@@ -8,6 +8,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+.kotlin
+nul
+/gradle/extracted
+/gradle/gradle.zip
 /app/build
 /core/domain/build
 /core/data/build
