@@ -12,6 +12,7 @@
 Balance = SUM(inflow amounts) - SUM(outflow amounts)
 ```
 
+- Amounts are always stored as positive Long values. The `type` field (INFLOW/OUTFLOW) determines whether the amount adds to or subtracts from the balance.
 - Balance is computed from all transactions in the vault
 - Room can calculate this via a `@Query` with aggregation
 - A cached balance field exists on the Vault entity for display performance

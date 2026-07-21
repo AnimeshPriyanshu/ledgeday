@@ -8,7 +8,7 @@
 | F-02 | Add Transaction | Record a transaction with amount, description, date, and type (inflow/outflow) |
 | F-03 | Auto Balance | Each vault displays the running balance calculated from all transactions |
 | F-04 | Transaction List | View all transactions in a vault sorted by date |
-| F-05 | Edit Transaction | Modify an existing transaction |
+| F-05 | Edit Transaction | Modify amount, type, description, or date of an existing transaction. `createdBy` and `createdAt` are immutable |
 | F-06 | Delete Transaction | Remove a transaction with balance recalculation |
 | F-07 | Multiple Vaults | User can create and manage multiple vaults |
 

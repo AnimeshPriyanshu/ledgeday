@@ -9,7 +9,11 @@ Splash
         │
         └── Workspace List
               │
+              ├── Create Workspace
+              │
               └── Vault List
+                    │
+                    ├── Create Vault
                     │
                     ├── Vault Detail (Transaction List)
                     │     │
@@ -30,6 +34,8 @@ Splash
 | Workspace List | `/workspaces` | List of user's workspaces |
 | Vault List | `/workspaces/{id}/vaults` | Vaults in the selected workspace |
 | Vault Detail | `/vaults/{id}` | Transaction list for a vault |
+| Create Workspace | `/workspaces/create` | Create a new workspace |
+| Create Vault | `/workspaces/{id}/vaults/create` | Create a new vault within a workspace |
 | Transaction Form | `/vaults/{id}/transaction` | Add / edit a transaction |
 | Settings | `/settings` | App settings, profile, invite |
 | Invite Partner | `/settings/invite` | Generate or accept invitation |

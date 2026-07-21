@@ -1,0 +1,25 @@
+build:
+  maxIssues: 0
+
+complexity:
+  active: true
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 15
+    thresholdInClasses: 15
+
+style:
+  active: true
+  MagicNumber:
+    active: false
+  WildcardImport:
+    active: false
+
+exceptions:
+  active: true
+
+naming:
+  active: true
+
+performance:
+  active: true

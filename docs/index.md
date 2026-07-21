@@ -11,6 +11,8 @@ An offline-first Android personal business ledger for partners.
 | [Design](design/data-model.md) | Data models, vault model, and sync protocol |
 | [UX](ux/screens.md) | Screen map and user journeys |
 | [Development](development/setup.md) | Setup, conventions, and testing strategy |
+| [Implementation](implementation/milestones-overview.md) | Milestone plan for MVP build |
+| [Tasks](implementation/tasks.md) | Breakdown of 52 development tasks with DoD |
 | [Decisions](decisions/architecture-decision-records.md) | Architecture Decision Records |
 
 ## Quick Links
