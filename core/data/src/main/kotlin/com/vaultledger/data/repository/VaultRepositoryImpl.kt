@@ -29,6 +29,7 @@ class VaultRepositoryImpl @Inject constructor(
         workspaceId: String,
         name: String,
         description: String,
+        color: String,
     ): Vault {
         val now = System.currentTimeMillis()
         val entity = VaultEntity(
@@ -38,6 +39,7 @@ class VaultRepositoryImpl @Inject constructor(
             description = description,
             createdAt = now,
             balance = 0L,
+            color = color,
         )
         vaultDao.insert(entity)
         return entity.toDomain()
@@ -64,6 +66,7 @@ private fun VaultEntity.toDomain(): Vault = Vault(
     description = description,
     createdAt = createdAt,
     balance = balance,
+    color = color,
 )
 
 private fun Vault.toEntity(): VaultEntity = VaultEntity(
@@ -73,4 +76,5 @@ private fun Vault.toEntity(): VaultEntity = VaultEntity(
     description = description,
     createdAt = createdAt,
     balance = balance,
+    color = color,
 )

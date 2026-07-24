@@ -24,4 +24,5 @@ data class VaultEntity(
     val description: String,
     val createdAt: Long,
     val balance: Long = 0L,
+    val color: String = "#006D77",
 )

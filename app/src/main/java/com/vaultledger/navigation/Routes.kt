@@ -5,7 +5,6 @@ object Routes {
     const val AUTH = "auth"
     const val WORKSPACES = "workspaces"
     const val VAULT_LIST = "workspaces/{workspaceId}/vaults"
-    const val CREATE_VAULT = "workspaces/{workspaceId}/vaults/create"
     const val VAULT_DETAIL = "vaults/{vaultId}"
     const val TRANSACTION_FORM = "vaults/{vaultId}/transaction?transactionId={transactionId}"
     const val SETTINGS = "settings"
@@ -18,7 +17,6 @@ object Routes {
 
     // Navigation builder functions
     fun vaultList(workspaceId: String): String = "workspaces/$workspaceId/vaults"
-    fun createVault(workspaceId: String): String = "workspaces/$workspaceId/vaults/create"
     fun vaultDetail(vaultId: String): String = "vaults/$vaultId"
     fun transactionForm(vaultId: String, transactionId: String? = null): String {
         return if (transactionId != null) {

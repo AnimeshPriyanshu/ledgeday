@@ -9,7 +9,6 @@ import androidx.navigation.navArgument
 import com.vaultledger.feature.settings.SettingsScreen
 import com.vaultledger.feature.transactions.TransactionFormScreen
 import com.vaultledger.feature.transactions.VaultDetailScreen
-import com.vaultledger.feature.vault.CreateVaultScreen
 import com.vaultledger.feature.vault.VaultListScreen
 import com.vaultledger.feature.workspace.WorkspaceListScreen
 import com.vaultledger.ui.screen.AuthScreen
@@ -63,30 +62,11 @@ fun AppNavGraph(navController: NavHostController) {
             arguments = listOf(
                 navArgument(Routes.ARG_WORKSPACE_ID) { type = NavType.StringType },
             ),
-        ) { backStackEntry ->
-            val workspaceId = backStackEntry.arguments?.getString(Routes.ARG_WORKSPACE_ID) ?: return@composable
+        ) {
             VaultListScreen(
-                workspaceId = workspaceId,
                 onVaultClick = { vaultId ->
                     navController.navigate(Routes.vaultDetail(vaultId))
                 },
-                onCreateVaultClick = {
-                    navController.navigate(Routes.createVault(workspaceId))
-                },
-                onNavigateBack = { navController.popBackStack() },
-            )
-        }
-
-        // Create Vault
-        composable(
-            route = Routes.CREATE_VAULT,
-            arguments = listOf(
-                navArgument(Routes.ARG_WORKSPACE_ID) { type = NavType.StringType },
-            ),
-        ) { backStackEntry ->
-            val workspaceId = backStackEntry.arguments?.getString(Routes.ARG_WORKSPACE_ID) ?: return@composable
-            CreateVaultScreen(
-                workspaceId = workspaceId,
                 onNavigateBack = { navController.popBackStack() },
             )
         }

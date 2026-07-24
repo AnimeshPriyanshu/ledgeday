@@ -11,4 +11,5 @@ data class Vault(
     val createdAt: Long,
     val transactionCount: Int = 0,
     val balance: Long = 0L,
+    val color: String = "#006D77",
 )
