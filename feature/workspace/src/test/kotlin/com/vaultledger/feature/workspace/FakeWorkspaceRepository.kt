@@ -10,8 +10,14 @@ import java.util.UUID
 class FakeWorkspaceRepository : WorkspaceRepository {
 
     private val _workspaces = MutableStateFlow(mutableMapOf<String, Workspace>())
+    var throwOnGetAll: Boolean = false
 
     override fun getAllWorkspaces(): Flow<List<Workspace>> {
+        if (throwOnGetAll) {
+            return kotlinx.coroutines.flow.flow {
+                throw RuntimeException("Failed to load workspaces")
+            }
+        }
         return _workspaces.map { it.values.sortedBy { w -> w.createdAt } }
     }
 

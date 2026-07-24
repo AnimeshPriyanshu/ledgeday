@@ -47,6 +47,6 @@ Each milestone compiles, is independently testable, and does not break previous 
 | Metric | Value |
 |--------|-------|
 | Milestones | 11 |
-| Total tasks | 55 |
+| Total tasks | 57 |
 | Estimated team | 2–3 developers |
 | Estimated time | 5–7 days (with AI assistance) |

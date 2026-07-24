@@ -160,7 +160,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 
 ---
 
-## M3 — Data Layer (4 tasks, was part of old M2)
+## M3 — Data Layer (3 tasks, was part of old M2)
 
 > Room entities now mirror the domain models from M2.
 
@@ -256,7 +256,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 - **Expected result**: Transaction CRUD works through repository abstraction
 - **Definition of Done**:
   - Implements `TransactionRepository`
-  - `getByVaultId()` returns transaction list ordered by date descending
+  - `getByVaultId()` returns transaction list ordered by `createdAt` descending
   - `insert()` persists a new transaction entity
   - `update()` modifies an existing transaction
   - `delete()` removes a transaction by ID
@@ -338,10 +338,11 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 - **Definition of Done**:
   - `NavHost` with `composable()` for each route:
     - `/splash`, `/auth`
-    - `/workspaces`, `/workspaces/create`
+    - `/workspaces`
     - `/workspaces/{workspaceId}/vaults`, `/workspaces/{workspaceId}/vaults/create`
     - `/vaults/{vaultId}`, `/vaults/{vaultId}/transaction?transactionId={transactionId}`
     - `/settings`, `/settings/invite`
+  - Workspace creation uses a dialog (see T6.3), not a navigation route
   - Route argument types: `workspaceId: String`, `vaultId: String`, `transactionId: String?` (optional, default `null`)
   - `./gradlew :app:assembleDebug` succeeds
 
@@ -351,7 +352,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 
 - **Goal**: Every route has a screen composable that compiles and renders
 - **Files affected**: One file per screen in the corresponding feature module:
-  - `feature/workspace/.../WorkspaceListScreen.kt`, `CreateWorkspaceScreen.kt`
+  - `feature/workspace/.../WorkspaceListScreen.kt` (no separate create screen; uses dialog)
   - `feature/vault/.../VaultListScreen.kt`, `CreateVaultScreen.kt`
   - `feature/transactions/.../VaultDetailScreen.kt`, `TransactionFormScreen.kt`
   - `feature/settings/.../SettingsScreen.kt`
@@ -509,7 +510,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 
 ---
 
-## M8 — Transaction List & Balance (6 tasks, was old M7 + delete from old M8)
+## M8 — Transaction List & Balance (5 tasks, was old M7 + delete from old M8)
 
 > Delete transaction (old T8.6) moved here because it modifies VaultDetailScreen, not the TransactionFormScreen.
 
@@ -550,7 +551,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 - **Dependencies**: T8.2
 - **Expected result**: Transaction list renders with date grouping
 - **Definition of Done**:
-  - `LazyColumn` with date-section headers and transaction rows
+  - `LazyColumn` with `createdAt`-section headers and transaction rows
   - Empty state: "No transactions yet. Tap + to record your first transaction."
   - FAB triggers `onAddTransaction` callback
 
@@ -563,7 +564,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 - **Dependencies**: T8.3
 - **Expected result**: Transaction row renders correctly for INFLOW and OUTFLOW
 - **Definition of Done**:
-  - Row shows: date (formatted via `DateFormatter`), description, type badge, formatted amount
+  - Row shows: createdAt (formatted via `DateFormatter`), description, type badge, formatted amount
   - INFLOW: green text, "+$X,XXX.XX"
   - OUTFLOW: red text, "-$X,XXX.XX"
   - Row is clickable (handler registered in T9.5 for edit)
@@ -600,7 +601,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
   - `vaultId` and optional `transactionId` from `SavedStateHandle`
   - If `transactionId` non-null: load existing, pre-populate form (edit mode)
   - If `transactionId` null: empty form (add mode)
-  - `StateFlow<TransactionFormState>`: amount, type, description, date, isSaving, errors
+  - `StateFlow<TransactionFormState>`: amount, type, description, createdAt, isSaving, errors
   - `validate(): Boolean` checks all rules
   - `save()` calls `repository.insert()` or `repository.update()` based on mode
   - Unit test verifies validation rules and save behavior
@@ -617,7 +618,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
   - Amount: `OutlinedTextField` with number keyboard, currency prefix "$"
   - Type: `SegmentedButton` or `Switch` for INFLOW/OUTFLOW
   - Description: `OutlinedTextField` with character counter (500 max)
-  - Date: read-only field that opens `DatePickerDialog` on tap
+  - Date (createdAt): read-only field that opens `DatePickerDialog` on tap
   - Save button in top app bar
   - Back button (with cancel if dirty)
 
@@ -633,8 +634,8 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
   - Amount > 0: "Amount must be greater than zero"
   - Description required: "Description is required"
   - Description max 500: "Maximum 500 characters"
-  - Date required: "Date is required"
-  - Date range: not before 2000-01-01, not after now + 1 day
+  - Date (createdAt) required: "Date is required"
+  - Date range (createdAt): not before 2000-01-01, not after now + 1 day
   - Type must be selected: "Select inflow or outflow"
   - Save button disabled while form has errors
   - Errors clear when user fixes the field
@@ -663,7 +664,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 - **Expected result**: Edit form shows existing data, save updates in place
 - **Definition of Done**:
   - Transaction row tap navigates to `/vaults/{vaultId}/transaction?transactionId={id}`
-  - Form pre-populates with existing amount, type, description, date
+  - Form pre-populates with existing amount, type, description, createdAt
   - Save calls `repository.update()`
   - On success: navigate back, list reflects changes
 
@@ -923,7 +924,7 @@ Tasks within a milestone can be parallelized unless dependencies state otherwise
 
 | Issue | Original | Optimized |
 |-------|----------|-----------|
-| Task count | 52 | 55 |
+| Task count | 52 | 57 |
 | Milestones | M1-M10 | M1-M11 |
 | M2 order | Entities before domain models | Domain models first, entities mirror them |
 | T3.3 (old) | TransactionRepo + balance cache (3+ hrs) | Split into T4.3 (CRUD) + T4.4 (balance cache) |

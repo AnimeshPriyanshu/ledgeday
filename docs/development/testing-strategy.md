@@ -15,7 +15,8 @@
 ## Unit Tests
 
 - **What**: Use cases, ViewModels, domain models, balance calculation
-- **How**: JUnit 5 + MockK + Turbine (for StateFlow testing)
+- **How**: JUnit 5 + Turbine (for StateFlow testing)
+- **Mocking strategy**: **Fake repositories are preferred** for ViewModel tests. Use `Fake*Repository` implementations that mirror real reactive behavior via `MutableStateFlow`. MockK is used only when interaction verification is required (e.g., verifying that a specific repository method was called a certain number of times).
 - **Coverage target**: 90%+ for domain layer
 
 ```kotlin

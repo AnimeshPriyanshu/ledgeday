@@ -7,9 +7,7 @@ Splash
   │
   └── Auth (Login / Register)
         │
-        └── Workspace List
-              │
-              ├── Create Workspace
+        └── Workspace List  ◄── Create Workspace (dialog)
               │
               └── Vault List
                     │
@@ -34,7 +32,7 @@ Splash
 | Workspace List | `/workspaces` | List of user's workspaces |
 | Vault List | `/workspaces/{id}/vaults` | Vaults in the selected workspace |
 | Vault Detail | `/vaults/{id}` | Transaction list for a vault |
-| Create Workspace | `/workspaces/create` | Create a new workspace |
+| Create Workspace | *(dialog, no route)* | Create a new workspace via dialog from Workspace List |
 | Create Vault | `/workspaces/{id}/vaults/create` | Create a new vault within a workspace |
 | Transaction Form | `/vaults/{id}/transaction` | Add / edit a transaction |
 | Settings | `/settings` | App settings, profile, invite |

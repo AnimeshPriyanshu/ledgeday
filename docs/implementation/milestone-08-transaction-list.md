@@ -16,7 +16,7 @@ Transaction list display with balance header, date-grouped rows, delete action. 
 | T8.5 | Wire FAB → transaction form | `:app/navigation/` |
 
 ## Completion Criteria
-- [ ] Transaction list renders, sorted by date descending
+- [ ] Transaction list renders, sorted by createdAt descending
 - [ ] Balance displays at top and matches `SUM(inflow) - SUM(outflow)`
 - [ ] INFLOW green, OUTFLOW red
 - [ ] Delete with confirmation, balance recalculates

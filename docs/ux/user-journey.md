@@ -5,8 +5,8 @@
 ```
 1. Opens app → sees auth screen
 2. Registers with email/password
-3. Lands on empty workspace list → taps "New Workspace"
-4. Creates workspace "Personal" → enters vaults screen
+3. Lands on empty workspace list → taps "+" FAB
+4. Creates workspace "Personal" via dialog → enters vaults screen
 5. Taps "New Vault" → names it "Freelance Income"
 6. Taps the vault → sees empty transaction list
 7. Taps "+" → enters amount, description, selects "INFLOW"

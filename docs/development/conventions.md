@@ -31,6 +31,8 @@ feature/vault/
 ├── VaultListViewModel.kt
 ├── VaultDetailScreen.kt
 ├── VaultDetailViewModel.kt
-├── VaultRepository.kt
-└── VaultModels.kt
+└── CreateVaultDialog.kt
 ```
+
+> **Note:** Repositories live in `:core:data`, not in feature modules.
+> Domain models live in `:core:domain`, not in feature modules.

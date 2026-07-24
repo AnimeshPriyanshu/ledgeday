@@ -22,13 +22,11 @@ class WorkspaceListViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var repository: FakeWorkspaceRepository
-    private lateinit var viewModel: WorkspaceListViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         repository = FakeWorkspaceRepository()
-        viewModel = WorkspaceListViewModel(repository)
     }
 
     @AfterEach
@@ -49,9 +47,9 @@ class WorkspaceListViewModelTest {
     @Test
     fun `init emits Loading then Success when workspaces exist`() = runTest(testDispatcher) {
         repository.createWorkspace("Test", "")
-        viewModel = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(repository)
 
-        viewModel.uiState.test {
+        vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
             val success = awaitItem()
             assertInstanceOf(UiState.Success::class.java, success)
@@ -64,10 +62,13 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun `createWorkspace adds workspace to list`() = runTest(testDispatcher) {
-        viewModel.uiState.test {
-            skipItems(1)
+        val vm = WorkspaceListViewModel(repository)
 
-            viewModel.createWorkspace("New Workspace")
+        vm.uiState.test {
+            // skipItems(2): skip Loading (initial state) + Empty (init completed before create)
+            skipItems(2)
+
+            vm.createWorkspace("New Workspace")
             advanceUntilIdle()
 
             val state = awaitItem()
@@ -81,16 +82,31 @@ class WorkspaceListViewModelTest {
     @Test
     fun `deleteWorkspace removes workspace from list`() = runTest(testDispatcher) {
         val created = repository.createWorkspace("To Delete", "")
-        viewModel = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(repository)
 
-        viewModel.uiState.test {
+        vm.uiState.test {
             // skipItems(2): Loading + initial Success(1 workspace) consumed by runTest before collection
             skipItems(2)
 
-            viewModel.deleteWorkspace(created.id)
+            vm.deleteWorkspace(created.id)
             advanceUntilIdle()
 
             assertEquals(UiState.Empty, awaitItem())
+            cancel()
+        }
+    }
+
+    @Test
+    fun `init emits Loading then Error when repository throws`() = runTest(testDispatcher) {
+        repository.throwOnGetAll = true
+        val vm = WorkspaceListViewModel(repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+            val error = awaitItem()
+            assertInstanceOf(UiState.Error::class.java, error)
+            val errorState = error as UiState.Error
+            assertTrue(errorState.message.contains("Failed to load"))
             cancel()
         }
     }

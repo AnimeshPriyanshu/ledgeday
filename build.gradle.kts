@@ -17,7 +17,3 @@ detekt {
     allRules = false
     config.setFrom(file("gradle/detekt-config.yml"))
 }
-
-ktlint {
-    version.set(libs.versions.ktlint.get())
-}

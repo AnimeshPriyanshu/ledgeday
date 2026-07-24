@@ -21,13 +21,13 @@ app/                    → Application module, DI, navigation
 ├── core/
 │   ├── domain/         → Shared domain models and interfaces
 │   ├── data/           → Shared data layer
-│   ├── sync/           → Sync engine module
+│   ├── sync/           → (placeholder) Cloud sync module
 │   └── ui/             → Shared UI components, theming
 ├── feature/
 │   ├── vault/          → Vault list feature
 │   ├── transactions/   → Transaction list & detail feature
-│   └── settings/       → Settings feature
-└── sync/               → Cloud sync service
+│   ├── settings/       → Settings feature
+│   └── workspace/      → Workspace list feature
 ```
 
 ## Key Design Decisions

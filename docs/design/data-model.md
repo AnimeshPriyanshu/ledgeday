@@ -45,7 +45,7 @@ User (1) ──── (N) Workspace (N) ──── (N) Vault (1) ──── 
 | Transaction.amount | `> 0` and `≤ 999,999,999,999` (max ~$10B in cents) |
 | Transaction.type | Required. Must be `INFLOW` or `OUTFLOW` |
 | Transaction.description | Required. Max 500 characters |
-| Transaction.date | Required. Epoch millis. Must be within reasonable range (not before 2000-01-01, not after now + 1 day) |
+| Transaction.createdAt | Required. Epoch millis. Must be within reasonable range (not before 2000-01-01, not after now + 1 day) |
 | Vault.name | Required. Max 100 characters |
 | Vault.description | Optional. Max 500 characters |
 | Workspace.name | Required. Max 100 characters |
@@ -61,9 +61,8 @@ User (1) ──── (N) Workspace (N) ──── (N) Vault (1) ──── 
 | amount | Long | Value in smallest currency unit (cents). Always positive; type determines add/subtract |
 | type | Enum | INFLOW / OUTFLOW |
 | description | String | |
+| createdAt | Long | Transaction date (epoch millis) and record creation time. In MVP, this single field serves both purposes; a separate user-editable `date` field will be added in Phase 2 |
+| updatedAt | Long? | Last modification time (nullable). Used for sync planning. Corresponds to `lastModified` in ADR-002 |
 | category | String? | (Phase 3) User-defined category. Omit from MVP entity; add via migration |
-| date | Long | Transaction date (epoch millis) |
-| createdAt | Long | Record creation time |
-| lastModified | Long | (Phase 2) Last modification time, used for sync. Omit from MVP entity; add via migration |
 | createdBy | String | (Phase 2) User ID who created it. Omit from MVP entity; add via migration |
 | synced | Boolean | (Phase 2) Pending sync flag. Omit from MVP entity; add via migration |
