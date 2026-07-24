@@ -65,7 +65,6 @@ class WorkspaceListViewModelTest {
         val vm = WorkspaceListViewModel(repository)
 
         vm.uiState.test {
-            // skipItems(2): skip Loading (initial state) + Empty (init completed before create)
             skipItems(2)
 
             vm.createWorkspace("New Workspace")
@@ -85,7 +84,6 @@ class WorkspaceListViewModelTest {
         val vm = WorkspaceListViewModel(repository)
 
         vm.uiState.test {
-            // skipItems(2): Loading + initial Success(1 workspace) consumed by runTest before collection
             skipItems(2)
 
             vm.deleteWorkspace(created.id)
@@ -126,6 +124,93 @@ class WorkspaceListViewModelTest {
             val data = (success as UiState.Success<*>).data as List<*>
             assertEquals(1, data.size)
             cancel()
+        }
+    }
+
+    @Test
+    fun `retry after error transitions to Loading then Success`() = runTest(testDispatcher) {
+        repository.throwOnGetAll = true
+        val vm = WorkspaceListViewModel(repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+
+            val error = awaitItem()
+            assertInstanceOf(UiState.Error::class.java, error)
+
+            repository.throwOnGetAll = false
+            vm.retry()
+
+            assertEquals(UiState.Loading, awaitItem())
+            assertEquals(UiState.Empty, awaitItem())
+            cancel()
+        }
+    }
+
+    @Test
+    fun `retry after error with data transitions to Loading then Success`() = runTest(testDispatcher) {
+        repository.createWorkspace("Existing", "")
+        repository.throwOnGetAll = true
+        val vm = WorkspaceListViewModel(repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+
+            val error = awaitItem()
+            assertInstanceOf(UiState.Error::class.java, error)
+
+            repository.throwOnGetAll = false
+            vm.retry()
+
+            assertEquals(UiState.Loading, awaitItem())
+            val success = awaitItem()
+            assertInstanceOf(UiState.Success::class.java, success)
+            val data = (success as UiState.Success<*>).data as List<*>
+            assertEquals(1, data.size)
+            assertEquals("Existing", (data[0] as Workspace).name)
+            cancel()
+        }
+    }
+
+    @Test
+    fun `Loading emitted before retry when currently in Error`() = runTest(testDispatcher) {
+        repository.throwOnGetAll = true
+        val vm = WorkspaceListViewModel(repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+
+            val error = awaitItem()
+            assertInstanceOf(UiState.Error::class.java, error)
+
+            repository.throwOnGetAll = false
+            vm.retry()
+
+            val afterRetry = awaitItem()
+            assertEquals(UiState.Loading, afterRetry)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `multiple retry calls do not cause duplicate emissions`() = runTest(testDispatcher) {
+        repository.throwOnGetAll = true
+        val vm = WorkspaceListViewModel(repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+
+            val error = awaitItem()
+            assertInstanceOf(UiState.Error::class.java, error)
+
+            repository.throwOnGetAll = false
+            vm.retry()
+            vm.retry()
+            vm.retry()
+
+            assertEquals(UiState.Loading, awaitItem())
+            assertEquals(UiState.Empty, awaitItem())
+            cancelAndIgnoreRemainingEvents()
         }
     }
 }

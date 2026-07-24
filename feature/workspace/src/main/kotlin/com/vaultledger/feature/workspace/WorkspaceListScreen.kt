@@ -152,7 +152,7 @@ fun WorkspaceListScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        TextButton(onClick = { }) {
+                        TextButton(onClick = { viewModel.retry() }) {
                             Text("Retry")
                         }
                     }

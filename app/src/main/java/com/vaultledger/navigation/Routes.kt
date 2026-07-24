@@ -4,7 +4,6 @@ object Routes {
     const val SPLASH = "splash"
     const val AUTH = "auth"
     const val WORKSPACES = "workspaces"
-    const val CREATE_WORKSPACE = "workspaces/create"
     const val VAULT_LIST = "workspaces/{workspaceId}/vaults"
     const val CREATE_VAULT = "workspaces/{workspaceId}/vaults/create"
     const val VAULT_DETAIL = "vaults/{vaultId}"
