@@ -11,7 +11,6 @@ import com.vaultledger.feature.transactions.TransactionFormScreen
 import com.vaultledger.feature.transactions.VaultDetailScreen
 import com.vaultledger.feature.vault.CreateVaultScreen
 import com.vaultledger.feature.vault.VaultListScreen
-import com.vaultledger.feature.workspace.CreateWorkspaceScreen
 import com.vaultledger.feature.workspace.WorkspaceListScreen
 import com.vaultledger.ui.screen.AuthScreen
 import com.vaultledger.ui.screen.SplashScreen
@@ -55,16 +54,6 @@ fun AppNavGraph(navController: NavHostController) {
                 onWorkspaceClick = { workspaceId ->
                     navController.navigate(Routes.vaultList(workspaceId))
                 },
-                onCreateWorkspaceClick = {
-                    navController.navigate(Routes.CREATE_WORKSPACE)
-                },
-            )
-        }
-
-        // Create Workspace
-        composable(Routes.CREATE_WORKSPACE) {
-            CreateWorkspaceScreen(
-                onNavigateBack = { navController.popBackStack() },
             )
         }
 
