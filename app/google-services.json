@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "vault-ledger-placeholder",
-    "storage_bucket": "vault-ledger-placeholder.appspot.com"
+    "project_number": "63512552184",
+    "project_id": "ledgeday",
+    "storage_bucket": "ledgeday.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+        "mobilesdk_app_id": "1:63512552184:android:b68b6a7b7c155452f0510d",
         "android_client_info": {
           "package_name": "com.vaultledger"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "placeholder-api-key"
+          "current_key": "AIzaSyBrgAEj3_995fvZRx76R1tAqpIRJ5iodN0"
         }
       ],
       "services": {
