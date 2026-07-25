@@ -35,7 +35,6 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:ui"))
 
-    implementation(libs.core.ktx)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     implementation(libs.compose.ui)
@@ -44,7 +43,6 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-    implementation(libs.navigation.compose)
 
     testImplementation(libs.junit5.api)
     testImplementation(libs.junit5.params)

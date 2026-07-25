@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.vaultledger.ui.common.LocalSnackbarHostState
 
 data class BottomNavItem(
     val label: String,
@@ -46,7 +48,6 @@ private val bottomNavItems = listOf(
 private val workspaceRoutes = setOf(
     Routes.WORKSPACES,
     Routes.SETTINGS,
-    // Vault list, create vault, vault detail, transaction form are nested under workspaces
 )
 
 @Composable
@@ -62,6 +63,10 @@ fun AppScaffold(
         currentRoute?.startsWith("vaults") == true
 
     Scaffold(
+        snackbarHost = {
+            val snackbarHostState = LocalSnackbarHostState.current
+            SnackbarHost(hostState = snackbarHostState)
+        },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {
@@ -69,8 +74,7 @@ fun AppScaffold(
                         val isSelected = when (item.route) {
                             Routes.WORKSPACES -> currentRoute == Routes.WORKSPACES ||
                                 currentRoute?.startsWith("workspaces") == true
-                            Routes.SETTINGS -> currentRoute == Routes.SETTINGS ||
-                                currentRoute == Routes.SETTINGS_INVITE
+                            Routes.SETTINGS -> currentRoute == Routes.SETTINGS
                             else -> currentRoute == item.route
                         }
 

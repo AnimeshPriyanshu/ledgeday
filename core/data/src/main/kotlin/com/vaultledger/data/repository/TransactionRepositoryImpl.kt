@@ -74,14 +74,7 @@ class TransactionRepositoryImpl @Inject constructor(
     }
 
     override fun getVaultBalance(vaultId: String): Flow<Long> {
-        return transactionDao.getTransactionsByVaultId(vaultId).map { transactions ->
-            transactions.fold(0L) { acc, tx ->
-                acc + when (tx.type) {
-                    TransactionType.INFLOW -> tx.amount
-                    TransactionType.OUTFLOW -> -tx.amount
-                }
-            }
-        }
+        return transactionDao.observeBalanceForVault(vaultId)
     }
 }
 

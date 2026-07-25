@@ -1,8 +1,10 @@
 package com.vaultledger.data.di
 
+import com.vaultledger.data.repository.FirebaseAuthRepository
 import com.vaultledger.data.repository.TransactionRepositoryImpl
 import com.vaultledger.data.repository.VaultRepositoryImpl
 import com.vaultledger.data.repository.WorkspaceRepositoryImpl
+import com.vaultledger.domain.repository.AuthRepository
 import com.vaultledger.domain.repository.TransactionRepository
 import com.vaultledger.domain.repository.VaultRepository
 import com.vaultledger.domain.repository.WorkspaceRepository
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindTransactionRepository(
         impl: TransactionRepositoryImpl,
     ): TransactionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        impl: FirebaseAuthRepository,
+    ): AuthRepository
 }

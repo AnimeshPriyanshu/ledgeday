@@ -16,7 +16,13 @@ import com.vaultledger.domain.model.TransactionType
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("vaultId")],
+    indices = [
+        Index("vaultId"),
+        Index(
+            value = ["vaultId", "createdAt"],
+            orders = [Index.Order.ASC, Index.Order.DESC],
+        ),
+    ],
 )
 data class TransactionEntity(
     @PrimaryKey val id: String,

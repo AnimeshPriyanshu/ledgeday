@@ -13,22 +13,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateToInvite: () -> Unit,
     onLogout: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
@@ -61,7 +64,10 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(
-                onClick = onLogout,
+                onClick = {
+                    viewModel.signOut()
+                    onLogout()
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                 ),

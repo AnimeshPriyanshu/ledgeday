@@ -2,6 +2,8 @@ package com.vaultledger.data.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vaultledger.data.local.VaultLedgerDatabase
 import com.vaultledger.data.local.dao.TransactionDao
 import com.vaultledger.data.local.dao.VaultDao
@@ -17,6 +19,10 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = Migration(1, 2) { db ->
+        db.execSQL("ALTER TABLE vaults ADD COLUMN color TEXT NOT NULL DEFAULT '#006D77'")
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): VaultLedgerDatabase {
@@ -25,7 +31,7 @@ object DatabaseModule {
             VaultLedgerDatabase::class.java,
             "vault-ledger-db",
         )
-            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_1_2)
             .build()
     }
 

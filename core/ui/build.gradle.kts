@@ -41,4 +41,16 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
+    implementation(project(":core:domain"))
+
+    testImplementation(libs.junit5.api)
+    testImplementation(libs.turbine)
+    testImplementation(libs.coroutines.test)
+    testRuntimeOnly(libs.junit5.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    useJUnitPlatform()
 }

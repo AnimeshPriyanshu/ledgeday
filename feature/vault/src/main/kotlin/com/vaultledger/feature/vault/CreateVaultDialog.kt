@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -114,6 +116,7 @@ fun CreateVaultDialog(
                                 .size(Dimensions.ColorPickerItemSize)
                                 .clip(CircleShape)
                                 .background(color)
+                                .semantics { contentDescription = "Color picker option ${index + 1}" }
                                 .then(
                                     if (isSelected) {
                                         Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)

@@ -22,6 +22,10 @@ android {
     room {
         schemaDirectory("$projectDir/schemas")
     }
+
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 }
 
 kotlin {
@@ -39,4 +43,22 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.kotlinx.serialization.json)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+
+    testImplementation(libs.junit5.api)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.core.testing)
+    testRuntimeOnly(libs.junit5.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
+    androidTestImplementation(libs.test.ext.junit)
+    androidTestImplementation(libs.coroutines.test)
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.test.core)
+    androidTestImplementation(libs.test.runner)
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    useJUnitPlatform()
 }

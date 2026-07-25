@@ -43,7 +43,6 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-    implementation(libs.navigation.compose)
 
     testImplementation(libs.junit5.api)
     testImplementation(libs.junit5.params)

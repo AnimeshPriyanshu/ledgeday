@@ -36,4 +36,14 @@ interface TransactionDao {
         """
     )
     suspend fun getBalanceForVault(vaultId: String): Long
+
+    @Query(
+        """
+        SELECT COALESCE(
+            SUM(CASE WHEN type = 'INFLOW' THEN amount ELSE -amount END),
+            0
+        ) FROM transactions WHERE vaultId = :vaultId
+        """
+    )
+    fun observeBalanceForVault(vaultId: String): Flow<Long>
 }

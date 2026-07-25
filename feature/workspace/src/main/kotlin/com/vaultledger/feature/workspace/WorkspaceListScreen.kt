@@ -20,9 +20,11 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,7 +42,9 @@ import com.vaultledger.ui.common.ContentDescriptions
 import com.vaultledger.ui.common.Dimensions
 import com.vaultledger.ui.common.EmptyState
 import com.vaultledger.ui.common.ErrorState
-import com.vaultledger.ui.common.LoadingState
+import com.vaultledger.ui.common.LocalSnackbarHostState
+import com.vaultledger.ui.common.ShimmerItemType
+import com.vaultledger.ui.common.ShimmerList
 import com.vaultledger.ui.common.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +56,17 @@ fun WorkspaceListScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var workspaceToDelete by remember { mutableStateOf<Workspace?>(null) }
+    val snackbarHostState = LocalSnackbarHostState.current
+    val errorMessage = (uiState as? UiState.Error)?.message
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(
+                message = it,
+                duration = SnackbarDuration.Short,
+            )
+        }
+    }
 
     if (showCreateDialog) {
         CreateWorkspaceDialog(
@@ -97,12 +112,16 @@ fun WorkspaceListScreen(
         },        ) { innerPadding ->
             when (val state = uiState) {
                 is UiState.Loading -> {
-                    LoadingState(modifier = Modifier.padding(innerPadding))
+                    ShimmerList(
+                        modifier = Modifier.padding(innerPadding),
+                        itemType = ShimmerItemType.CARD,
+                    )
                 }
 
                 is UiState.Empty -> {
                     EmptyState(
-                        message = "No workspaces yet.\nCreate one to get started.",
+                        title = "No workspaces yet",
+                        description = "Create one to get started.",
                         modifier = Modifier.padding(innerPadding),
                     )
                 }

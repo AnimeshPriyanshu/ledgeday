@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.vaultledger.navigation.AppNavGraph
 import com.vaultledger.navigation.AppScaffold
+import com.vaultledger.ui.common.SnackbarProvider
 import com.vaultledger.ui.theme.VaultLedgerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -23,8 +24,10 @@ class MainActivity : ComponentActivity() {
             VaultLedgerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
-                    AppScaffold(navController = navController) {
-                        AppNavGraph(navController = navController)
+                    SnackbarProvider {
+                        AppScaffold(navController = navController) {
+                            AppNavGraph(navController = navController)
+                        }
                     }
                 }
             }

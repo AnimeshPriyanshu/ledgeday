@@ -1,5 +1,6 @@
 package com.vaultledger.feature.transactions
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
@@ -30,7 +33,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.vaultledger.domain.model.TransactionType
 import com.vaultledger.ui.common.ContentDescriptions
 import com.vaultledger.ui.common.ErrorState
+import com.vaultledger.ui.common.LocalSnackbarHostState
 import com.vaultledger.ui.common.LoadingState
 import com.vaultledger.ui.util.DateFormatter
 import java.time.Instant
@@ -59,11 +65,64 @@ fun TransactionFormScreen(
     val state by viewModel.state.collectAsState()
     val title = if (transactionId != null) "Edit Transaction" else "Add Transaction"
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
 
     // Navigate back on successful save
     if (state.saveSuccess) {
         onNavigateBack()
         return
+    }
+
+    // Track whether the form has been modified from initial empty state
+    val isDirty by remember {
+        derivedStateOf {
+            state.amount.isNotEmpty() ||
+                state.type != null ||
+                state.description.isNotEmpty()
+        }
+    }
+
+    // Handle discard dialog
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Discard changes?") },
+            text = {
+                Text("You have unsaved changes. Are you sure you want to discard them?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                        onNavigateBack()
+                    },
+                ) {
+                    Text("Discard")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Keep Editing")
+                }
+            },
+        )
+    }
+
+    // Intercept system back button
+    BackHandler(enabled = isDirty) {
+        showDiscardDialog = true
+    }
+
+    // Show snackbar on save error
+    val snackbarHostState = LocalSnackbarHostState.current
+    LaunchedEffect(state.saveError) {
+        state.saveError?.let { error ->
+            snackbarHostState.showSnackbar(
+                message = error,
+                actionLabel = "Dismiss",
+                duration = SnackbarDuration.Short,
+            )
+        }
     }
 
     // Compute whether save should be enabled
@@ -111,7 +170,15 @@ fun TransactionFormScreen(
             TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = {
+                            if (isDirty) {
+                                showDiscardDialog = true
+                            } else {
+                                onNavigateBack()
+                            }
+                        },
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = ContentDescriptions.Back,
@@ -155,15 +222,6 @@ fun TransactionFormScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp),
             ) {
-                // Error banner
-                if (state.saveError != null) {
-                    Text(
-                        text = state.saveError!!,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(bottom = 16.dp),
-                    )
-                }
 
                 // Amount field
                 Text(

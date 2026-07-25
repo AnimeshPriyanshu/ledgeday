@@ -49,7 +49,6 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:data"))
     implementation(project(":core:ui"))
-    implementation(project(":core:sync"))
     implementation(project(":feature:workspace"))
     implementation(project(":feature:vault"))
     implementation(project(":feature:transactions"))
@@ -72,4 +71,19 @@ dependencies {
     implementation(libs.firebase.auth)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    testImplementation(libs.junit5.api)
+    testImplementation(libs.coroutines.test)
+    testRuntimeOnly(libs.junit5.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
+    androidTestImplementation(libs.test.ext.junit)
+    androidTestImplementation(libs.coroutines.test)
+    androidTestImplementation(libs.test.runner)
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(platform(libs.compose.bom))
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    useJUnitPlatform()
 }

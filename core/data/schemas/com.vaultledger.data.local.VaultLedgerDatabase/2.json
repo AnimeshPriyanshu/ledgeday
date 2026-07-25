@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "64b85120f2598d4126c2ac1eb4c6c095",
+    "identityHash": "b8c7ff3be3fbefbd8f898984abd48d49",
     "entities": [
       {
         "tableName": "workspaces",
@@ -38,9 +38,7 @@
           "columnNames": [
             "id"
           ]
-        },
-        "indices": [],
-        "foreignKeys": []
+        }
       },
       {
         "tableName": "vaults",
@@ -176,6 +174,19 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_vaultId` ON `${TABLE_NAME}` (`vaultId`)"
+          },
+          {
+            "name": "index_transactions_vaultId_createdAt",
+            "unique": false,
+            "columnNames": [
+              "vaultId",
+              "createdAt"
+            ],
+            "orders": [
+              "ASC",
+              "DESC"
+            ],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_transactions_vaultId_createdAt` ON `${TABLE_NAME}` (`vaultId` ASC, `createdAt` DESC)"
           }
         ],
         "foreignKeys": [
@@ -193,10 +204,9 @@
         ]
       }
     ],
-    "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '64b85120f2598d4126c2ac1eb4c6c095')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b8c7ff3be3fbefbd8f898984abd48d49')"
     ]
   }
 }

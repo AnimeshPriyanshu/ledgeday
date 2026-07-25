@@ -14,20 +14,33 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun SplashScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToWorkspaces: () -> Unit,
+    viewModel: SplashViewModel = hiltViewModel(),
 ) {
-    LaunchedEffect(Unit) {
-        delay(1500)
-        // TODO: Check auth state; navigate accordingly
-        onNavigateToAuth()
+    val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(state) {
+        when (state) {
+            is SplashState.Authenticated -> {
+                onNavigateToWorkspaces()
+            }
+            is SplashState.Unauthenticated -> {
+                onNavigateToAuth()
+            }
+            is SplashState.Loading -> {
+                // Show spinner while checking auth state
+            }
+        }
     }
 
     Column(
