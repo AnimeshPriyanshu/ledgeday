@@ -1,5 +1,6 @@
 package com.vaultledger.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -32,7 +33,7 @@ data class TransactionEntity(
     val amount: Long,
     val description: String,
     val createdAt: Long,
-    val updatedAt: Long = 0L,
-    val synced: Boolean = false,
-    val createdBy: String = "",
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L,
+    @ColumnInfo(defaultValue = "0") val synced: Boolean = false,
+    @ColumnInfo(defaultValue = "''") val createdBy: String = "",
 )

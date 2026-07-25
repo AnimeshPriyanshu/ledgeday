@@ -1,12 +1,20 @@
 package com.vaultledger.data.remote
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.vaultledger.data.repository.exception.FirestoreTimeoutException
+import com.vaultledger.data.repository.exception.OfflineException
 import com.vaultledger.domain.model.Invite
 import com.vaultledger.domain.model.InviteStatus
 import com.vaultledger.domain.model.Workspace
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
 import java.security.SecureRandom
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,12 +22,16 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Singleton
-class InviteRemoteDataSource @Inject constructor() {
+class InviteRemoteDataSource @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
 
     private val firestore by lazy { FirebaseFirestore.getInstance() }
     private val secureRandom = SecureRandom()
 
     suspend fun createInvite(creatorId: String, creatorEmail: String): Invite {
+        checkConnectivity()
+
         val code = generateCode()
         val now = System.currentTimeMillis()
         val expiresAt = now + FirestoreConstants.INVITE_EXPIRY_MS
@@ -34,13 +46,29 @@ class InviteRemoteDataSource @Inject constructor() {
             FirestoreConstants.FIELD_ACCEPTED_BY to null,
         )
 
-        suspendCancellableCoroutine<Unit> { cont ->
-            firestore.collection(FirestoreConstants.COLLECTION_INVITES).document(code)
-                .set(data)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) cont.resume(Unit)
-                    else cont.resumeWithException(task.exception ?: RuntimeException("Failed to create invite"))
+        try {
+            withTimeout(15_000L) {
+                suspendCancellableCoroutine<Unit> { cont ->
+                    val setTask = firestore.collection(FirestoreConstants.COLLECTION_INVITES)
+                        .document(code).set(data)
+
+                    setTask.addOnCompleteListener { task ->
+                        if (cont.isActive) {
+                            if (task.isSuccessful) {
+                                cont.resume(Unit)
+                            } else {
+                                cont.resumeWithException(
+                                    task.exception ?: RuntimeException("Failed to create invite"),
+                                )
+                            }
+                        }
+                    }
+
+
                 }
+            }
+        } catch (e: TimeoutCancellationException) {
+            throw FirestoreTimeoutException("Firestore write timed out after 15s")
         }
 
         return Invite(
@@ -128,6 +156,17 @@ class InviteRemoteDataSource @Inject constructor() {
                 if (task.isSuccessful) cont.resume(Unit)
                 else cont.resumeWithException(task.exception ?: RuntimeException("Failed to revoke invite"))
             }
+    }
+
+    private fun checkConnectivity() {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork
+            ?: throw OfflineException("Internet connection required to generate an invite.")
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+            ?: throw OfflineException("Internet connection required to generate an invite.")
+        if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+            throw OfflineException("Internet connection required to generate an invite.")
+        }
     }
 
     private fun generateCode(): String {

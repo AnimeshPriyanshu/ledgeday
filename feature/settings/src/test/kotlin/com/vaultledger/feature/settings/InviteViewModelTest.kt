@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,6 +43,8 @@ class InviteViewModelTest {
         assertInstanceOf(InviteUiState.Idle::class.java, vm.state.value)
     }
 
+
+
     @Test
     fun `generate transitions to Generating then Generated`() = runTest(testDispatcher) {
         val vm = InviteViewModel(generateUseCase, revokeUseCase)
@@ -67,6 +70,38 @@ class InviteViewModelTest {
             assertInstanceOf(InviteUiState.Generating::class.java, awaitItem())
             val error = awaitItem()
             assertInstanceOf(InviteUiState.Error::class.java, error)
+            cancel()
+        }
+    }
+
+    @Test
+    fun `generate transitions to Error with offline message when offline`() = runTest(testDispatcher) {
+        repository.simulateOffline = true
+        val vm = InviteViewModel(generateUseCase, revokeUseCase)
+
+        vm.state.test {
+            assertInstanceOf(InviteUiState.Idle::class.java, awaitItem())
+            vm.generateInvite()
+            assertInstanceOf(InviteUiState.Generating::class.java, awaitItem())
+            val error = awaitItem() as InviteUiState.Error
+            assertEquals("Internet connection required to generate an invite.", error.message)
+            assertEquals(true, error.isRetryable)
+            cancel()
+        }
+    }
+
+    @Test
+    fun `generate transitions to Error with timeout message when timeout`() = runTest(testDispatcher) {
+        repository.simulateTimeout = true
+        val vm = InviteViewModel(generateUseCase, revokeUseCase)
+
+        vm.state.test {
+            assertInstanceOf(InviteUiState.Idle::class.java, awaitItem())
+            vm.generateInvite()
+            assertInstanceOf(InviteUiState.Generating::class.java, awaitItem())
+            val error = awaitItem() as InviteUiState.Error
+            assertEquals("Unable to reach the server. Please try again.", error.message)
+            assertEquals(true, error.isRetryable)
             cancel()
         }
     }

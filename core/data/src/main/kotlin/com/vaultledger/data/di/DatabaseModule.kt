@@ -35,7 +35,7 @@ object DatabaseModule {
     }
 
     private val MIGRATION_3_4 = Migration(3, 4) { db ->
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_transactions_description ON transactions(description)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_transactions_description ON transactions(description)")
     }
 
     @Provides

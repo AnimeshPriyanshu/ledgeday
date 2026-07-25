@@ -1,5 +1,6 @@
 package com.vaultledger.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -9,7 +10,7 @@ data class WorkspaceEntity(
     val name: String,
     val description: String,
     val createdAt: Long,
-    val memberIds: List<String> = emptyList(),
-    val synced: Boolean = false,
-    val updatedAt: Long = 0L,
+    @ColumnInfo(defaultValue = "'[]'") val memberIds: List<String> = emptyList(),
+    @ColumnInfo(defaultValue = "0") val synced: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L,
 )

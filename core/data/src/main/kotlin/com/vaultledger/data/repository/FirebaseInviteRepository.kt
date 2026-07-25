@@ -16,7 +16,10 @@ class FirebaseInviteRepository @Inject constructor(
 ) : InviteRepository {
 
     override suspend fun createInvite(): Invite {
-        val user = firebaseAuth.currentUser ?: throw AuthException("You must be signed in to create an invite")
+        val user = firebaseAuth.currentUser
+        if (user == null) {
+            throw AuthException("You must be signed in to create an invite")
+        }
         return remoteDataSource.createInvite(
             creatorId = user.uid,
             creatorEmail = user.email ?: "",

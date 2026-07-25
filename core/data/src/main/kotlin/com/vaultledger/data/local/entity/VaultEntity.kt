@@ -1,5 +1,6 @@
 package com.vaultledger.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -24,7 +25,7 @@ data class VaultEntity(
     val description: String,
     val createdAt: Long,
     val balance: Long = 0L,
-    val color: String = "#006D77",
-    val synced: Boolean = false,
-    val updatedAt: Long = 0L,
+    @ColumnInfo(defaultValue = "'#006D77'") val color: String = "#006D77",
+    @ColumnInfo(defaultValue = "0") val synced: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0L,
 )

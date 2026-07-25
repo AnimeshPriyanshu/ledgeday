@@ -1,5 +1,7 @@
 package com.vaultledger.feature.settings
 
+import com.vaultledger.data.repository.exception.FirestoreTimeoutException
+import com.vaultledger.data.repository.exception.OfflineException
 import com.vaultledger.domain.model.Invite
 import com.vaultledger.domain.model.InviteStatus
 import com.vaultledger.domain.model.Workspace
@@ -10,6 +12,8 @@ class FakeInviteRepository : InviteRepository {
 
     private val invites = mutableMapOf<String, Invite>()
     var throwOnCreate: Boolean = false
+    var simulateOffline: Boolean = false
+    var simulateTimeout: Boolean = false
     var throwOnAccept: Boolean = false
     var throwOnRevoke: Boolean = false
     var createError: String? = null
@@ -17,6 +21,12 @@ class FakeInviteRepository : InviteRepository {
     var revokeError: String? = null
 
     override suspend fun createInvite(): Invite {
+        if (simulateOffline) {
+            throw OfflineException("Internet connection required to generate an invite.")
+        }
+        if (simulateTimeout) {
+            throw FirestoreTimeoutException("Firestore write timed out after 15s")
+        }
         if (throwOnCreate) {
             throw RuntimeException(createError ?: "Failed to create invite")
         }

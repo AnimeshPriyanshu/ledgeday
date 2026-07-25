@@ -36,8 +36,9 @@ class InviteViewModel @Inject constructor(
             try {
                 val invite = generateInviteUseCase()
                 _state.value = InviteUiState.Generated(invite)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
                 val mapped = FirestoreErrorMapper.map(e)
                 _state.value = InviteUiState.Error(mapped.userMessage, mapped.isRetryable)
             }

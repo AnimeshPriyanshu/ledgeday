@@ -1,6 +1,8 @@
 package com.vaultledger.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.vaultledger.data.repository.exception.FirestoreTimeoutException
+import com.vaultledger.data.repository.exception.OfflineException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.retryWhen
@@ -67,6 +69,20 @@ object FirestoreErrorMapper {
     ) }
 
     fun map(throwable: Throwable): MappedError {
+        return when (throwable) {
+            is OfflineException -> MappedError(
+                userMessage = "Internet connection required to generate an invite.",
+                isRetryable = true,
+            )
+            is FirestoreTimeoutException -> MappedError(
+                userMessage = "Unable to reach the server. Please try again.",
+                isRetryable = true,
+            )
+            else -> mapFirestore(throwable)
+        }
+    }
+
+    private fun mapFirestore(throwable: Throwable): MappedError {
         val firestoreException = unwrap(throwable)
         if (firestoreException != null) {
             for (pattern in patterns) {
