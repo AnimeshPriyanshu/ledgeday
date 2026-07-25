@@ -21,10 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -32,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -48,8 +44,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vaultledger.domain.model.Vault
+import com.vaultledger.ui.common.ConfirmDeleteDialog
+import com.vaultledger.ui.common.ContentDescriptions
+import com.vaultledger.ui.common.Dimensions
+import com.vaultledger.ui.common.EmptyState
+import com.vaultledger.ui.common.ErrorState
+import com.vaultledger.ui.common.LoadingState
 import com.vaultledger.ui.common.UiState
 import com.vaultledger.ui.common.VaultColors
+import com.vaultledger.ui.util.CurrencyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,30 +76,14 @@ fun VaultListScreen(
     }
 
     vaultToDelete?.let { vault ->
-        AlertDialog(
-            onDismissRequest = { vaultToDelete = null },
-            title = { Text("Delete Vault") },
-            text = {
-                Text("Are you sure you want to delete \"${vault.name}\"? This will also delete all transactions in this vault. This action cannot be undone.")
+        ConfirmDeleteDialog(
+            title = "Delete Vault",
+            message = "Are you sure you want to delete \"${vault.name}\"? This will also delete all transactions in this vault. This action cannot be undone.",
+            onConfirm = {
+                viewModel.deleteVault(vault.id)
+                vaultToDelete = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteVault(vault.id)
-                        vaultToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { vaultToDelete = null }) {
-                    Text("Cancel")
-                }
-            },
+            onDismiss = { vaultToDelete = null },
         )
     }
 
@@ -106,10 +93,10 @@ fun VaultListScreen(
                 title = { Text("Vaults") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = ContentDescriptions.Back,
+                    )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -121,32 +108,22 @@ fun VaultListScreen(
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary,
-            ) {
-                Icon(
+            ) {                    Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Create vault",
+                    contentDescription = ContentDescriptions.CreateVault,
                 )
             }
         },
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
             when (val state = uiState) {
                 is UiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                    )
+                    LoadingState(modifier = Modifier.padding(innerPadding))
                 }
 
                 is UiState.Empty -> {
-                    Text(
-                        text = "No vaults in this workspace.\nTap + to add one.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center),
+                    EmptyState(
+                        message = "No vaults in this workspace.\nTap + to add one.",
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
 
@@ -155,28 +132,20 @@ fun VaultListScreen(
                         vaults = state.data,
                         onVaultClick = onVaultClick,
                         onVaultLongClick = { vaultToDelete = it },
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                     )
                 }
 
                 is UiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = state.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        TextButton(onClick = { viewModel.retry() }) {
-                            Text("Retry")
-                        }
-                    }
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.retry() },
+                        modifier = Modifier.padding(innerPadding),
+                    )
                 }
             }
-        }
     }
 }
 
@@ -189,9 +158,9 @@ private fun VaultList(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = modifier.padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.padding(horizontal = Dimensions.ListHorizontalPadding),
+        contentPadding = PaddingValues(vertical = Dimensions.ListContentPadding),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.SpacingSmall),
     ) {
         items(vaults, key = { it.id }) { vault ->
             Card(
@@ -205,7 +174,7 @@ private fun VaultList(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(Dimensions.CardPadding),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
@@ -214,7 +183,7 @@ private fun VaultList(
                             .clip(CircleShape)
                             .background(VaultColors.fromHex(vault.color)),
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(Dimensions.SpacingSmall + 4.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = vault.name,
@@ -232,7 +201,7 @@ private fun VaultList(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Dimensions.SpacingSmall))
                     Text(
                         text = formatBalance(vault.balance),
                         style = MaterialTheme.typography.titleMedium,
@@ -248,10 +217,4 @@ private fun VaultList(
     }
 }
 
-private fun formatBalance(balance: Long): String {
-    val sign = if (balance < 0) "-" else ""
-    val abs = kotlin.math.abs(balance)
-    val dollars = abs / 100
-    val cents = abs % 100
-    return "$sign$${dollars}.${cents.toString().padStart(2, '0')}"
-}
+private fun formatBalance(balance: Long): String = CurrencyFormatter.format(balance)

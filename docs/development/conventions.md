@@ -13,7 +13,7 @@
 | Classes | PascalCase | `VaultRepository` |
 | Functions | camelCase | `getTransactions()` |
 | Composable | PascalCase | `VaultScreen()` |
-| ViewModel | PascalCase + "VM" | `VaultListViewModel` |
+| ViewModel | PascalCase + "ViewModel" | `VaultListViewModel` |
 | Test classes | PascalCase + "Test" | `VaultRepositoryTest` |
 
 ## Architecture Rules

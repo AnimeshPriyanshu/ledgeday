@@ -3,7 +3,6 @@ package com.vaultledger.feature.workspace
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -15,17 +14,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.collectAsState
@@ -40,6 +35,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vaultledger.domain.model.Workspace
+import com.vaultledger.ui.common.ConfirmDeleteDialog
+import com.vaultledger.ui.common.ContentDescriptions
+import com.vaultledger.ui.common.Dimensions
+import com.vaultledger.ui.common.EmptyState
+import com.vaultledger.ui.common.ErrorState
+import com.vaultledger.ui.common.LoadingState
 import com.vaultledger.ui.common.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,30 +64,14 @@ fun WorkspaceListScreen(
     }
 
     workspaceToDelete?.let { workspace ->
-        AlertDialog(
-            onDismissRequest = { workspaceToDelete = null },
-            title = { Text("Delete Workspace") },
-            text = {
-                Text("Are you sure you want to delete \"${workspace.name}\"? This will also delete all vaults and transactions in this workspace. This action cannot be undone.")
+        ConfirmDeleteDialog(
+            title = "Delete Workspace",
+            message = "Are you sure you want to delete \"${workspace.name}\"? This will also delete all vaults and transactions in this workspace. This action cannot be undone.",
+            onConfirm = {
+                viewModel.deleteWorkspace(workspace.id)
+                workspaceToDelete = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteWorkspace(workspace.id)
-                        workspaceToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { workspaceToDelete = null }) {
-                    Text("Cancel")
-                }
-            },
+            onDismiss = { workspaceToDelete = null },
         )
     }
 
@@ -106,29 +91,19 @@ fun WorkspaceListScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Create workspace",
+                    contentDescription = ContentDescriptions.CreateWorkspace,
                 )
             }
-        },
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
+        },        ) { innerPadding ->
             when (val state = uiState) {
                 is UiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                    )
+                    LoadingState(modifier = Modifier.padding(innerPadding))
                 }
 
                 is UiState.Empty -> {
-                    Text(
-                        text = "No workspaces yet.\nCreate one to get started.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center),
+                    EmptyState(
+                        message = "No workspaces yet.\nCreate one to get started.",
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
 
@@ -137,28 +112,20 @@ fun WorkspaceListScreen(
                         workspaces = state.data,
                         onWorkspaceClick = onWorkspaceClick,
                         onWorkspaceLongClick = { workspaceToDelete = it },
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                     )
                 }
 
                 is UiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = state.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        TextButton(onClick = { viewModel.retry() }) {
-                            Text("Retry")
-                        }
-                    }
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.retry() },
+                        modifier = Modifier.padding(innerPadding),
+                    )
                 }
             }
-        }
     }
 }
 
@@ -171,9 +138,9 @@ private fun WorkspaceList(
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = modifier.padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.padding(horizontal = Dimensions.ListHorizontalPadding),
+        contentPadding = PaddingValues(vertical = Dimensions.ListContentPadding),
+        verticalArrangement = Arrangement.spacedBy(Dimensions.SpacingSmall),
     ) {
         items(workspaces, key = { it.id }) { workspace ->
             Card(
@@ -184,10 +151,9 @@ private fun WorkspaceList(
                         onLongClick = { onWorkspaceLongClick(workspace) },
                     ),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                Column(                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(Dimensions.CardPadding),
                 ) {
                     Text(
                         text = workspace.name,
@@ -196,7 +162,7 @@ private fun WorkspaceList(
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (workspace.description.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Dimensions.SpacingXSmall))
                         Text(
                             text = workspace.description,
                             style = MaterialTheme.typography.bodyMedium,

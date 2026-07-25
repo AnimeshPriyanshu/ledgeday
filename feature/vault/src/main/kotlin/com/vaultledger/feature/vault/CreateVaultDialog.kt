@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.vaultledger.ui.common.Dimensions
 import com.vaultledger.ui.common.VaultColors
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -45,11 +46,11 @@ fun CreateVaultDialog(
         var valid = true
         nameError = when {
             name.isBlank() -> { valid = false; "Name is required" }
-            name.length > 100 -> { valid = false; "Maximum 100 characters" }
+            name.length > Dimensions.MaxNameLength -> { valid = false; "Maximum ${Dimensions.MaxNameLength} characters" }
             else -> null
         }
         descriptionError = when {
-            description.length > 500 -> { valid = false; "Maximum 500 characters" }
+            description.length > Dimensions.MaxDescriptionLength -> { valid = false; "Maximum ${Dimensions.MaxDescriptionLength} characters" }
             else -> null
         }
         return valid
@@ -69,7 +70,7 @@ fun CreateVaultDialog(
                     text = "Enter the details for your new vault.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingMedium))
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
@@ -82,7 +83,7 @@ fun CreateVaultDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingSmall + 4.dp))
                 OutlinedTextField(
                     value = description,
                     onValueChange = {
@@ -95,22 +96,22 @@ fun CreateVaultDialog(
                     maxLines = 3,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingMedium))
                 Text(
                     text = "Color",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingSmall))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    VaultColors.all.forEach { color ->
-                        val hex = VaultColors.hexStrings[VaultColors.all.indexOf(color)]
+                    VaultColors.all.forEachIndexed { index, color ->
+                        val hex = VaultColors.hexStrings[index]
                         val isSelected = hex == selectedColor
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(Dimensions.ColorPickerItemSize)
                                 .clip(CircleShape)
                                 .background(color)
                                 .then(

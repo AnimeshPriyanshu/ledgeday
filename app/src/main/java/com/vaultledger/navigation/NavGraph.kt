@@ -80,7 +80,6 @@ fun AppNavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val vaultId = backStackEntry.arguments?.getString(Routes.ARG_VAULT_ID) ?: return@composable
             VaultDetailScreen(
-                vaultId = vaultId,
                 onAddTransactionClick = {
                     navController.navigate(Routes.transactionForm(vaultId))
                 },

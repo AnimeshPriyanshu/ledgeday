@@ -15,7 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.vaultledger.ui.common.Dimensions
 
 @Composable
 fun CreateWorkspaceDialog(
@@ -28,7 +28,7 @@ fun CreateWorkspaceDialog(
     fun validate(): Boolean {
         nameError = when {
             name.isBlank() -> "Name is required"
-            name.length > 100 -> "Maximum 100 characters"
+            name.length > Dimensions.MaxNameLength -> "Maximum ${Dimensions.MaxNameLength} characters"
             else -> null
         }
         return nameError == null
@@ -43,7 +43,7 @@ fun CreateWorkspaceDialog(
                     text = "Enter a name for your new workspace.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimensions.SpacingMedium))
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
