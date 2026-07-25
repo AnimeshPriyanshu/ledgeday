@@ -8,8 +8,10 @@ import com.google.firebase.auth.FirebaseUser
 import com.vaultledger.data.repository.exception.AuthException
 import com.vaultledger.domain.model.User
 import com.vaultledger.domain.repository.AuthRepository
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -34,7 +36,7 @@ class FirebaseAuthRepository @Inject constructor() : AuthRepository {
         awaitClose {
             firebaseAuth.removeAuthStateListener(listener)
         }
-    }
+    }.buffer(Channel.UNLIMITED)
 
     override suspend fun signIn(email: String, password: String) {
         suspendCancellableCoroutine<Unit> { continuation ->

@@ -166,10 +166,16 @@ class TransactionFormViewModel @Inject constructor(
         val amountError = when {
             state.amount.isBlank() -> { valid = false; "Amount is required" }
             else -> {
-                val cents = parseAmountToCents(state.amount)
-                when {
-                    cents <= 0L -> { valid = false; "Amount must be greater than zero" }
-                    else -> null
+                val parts = state.amount.split(".")
+                val dollars = parts[0].toLongOrNull()
+                if (dollars == null || dollars > Long.MAX_VALUE / 100) {
+                    valid = false; "Amount is too large"
+                } else {
+                    val cents = parseAmountToCents(state.amount)
+                    when {
+                        cents <= 0L -> { valid = false; "Amount must be greater than zero" }
+                        else -> null
+                    }
                 }
             }
         }

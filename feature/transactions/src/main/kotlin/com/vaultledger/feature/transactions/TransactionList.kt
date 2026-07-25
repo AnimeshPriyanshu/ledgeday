@@ -29,7 +29,7 @@ fun TransactionList(
     val grouped = remember(transactions) {
         transactions.groupBy { dateKey(it.createdAt) }
             .entries
-            .sortedByDescending { it.key }
+            .sortedByDescending { it.value.maxOf { t -> t.createdAt } }
             .flatMap { (date, txns) ->
                 listOf(DateHeader(date)) + txns.sortedByDescending { it.createdAt }
             }

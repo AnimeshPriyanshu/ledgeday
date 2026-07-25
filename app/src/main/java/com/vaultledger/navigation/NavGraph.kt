@@ -34,7 +34,7 @@ fun AppNavGraph(navController: NavHostController) {
             currentRoute != null
         if (isAuthenticated == false && isProtectedRoute) {
             navController.navigate(Routes.AUTH) {
-                popUpTo(0) { inclusive = true }
+                popUpTo(Routes.WORKSPACES) { inclusive = true }
                 launchSingleTop = true
             }
         }
@@ -141,7 +141,8 @@ fun AppNavGraph(navController: NavHostController) {
                 onNavigateToInvite = {},
                 onLogout = {
                     navController.navigate(Routes.AUTH) {
-                        popUpTo(0) { inclusive = true }
+                        popUpTo(Routes.WORKSPACES) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
             )

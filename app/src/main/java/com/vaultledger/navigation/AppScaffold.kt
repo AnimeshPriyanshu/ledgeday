@@ -59,8 +59,7 @@ fun AppScaffold(
     val currentRoute = navBackStackEntry?.destination?.route
 
     val showBottomBar = currentRoute in workspaceRoutes ||
-        currentRoute?.startsWith("workspaces") == true ||
-        currentRoute?.startsWith("vaults") == true
+        currentRoute?.startsWith("workspaces/") == true
 
     Scaffold(
         snackbarHost = {
