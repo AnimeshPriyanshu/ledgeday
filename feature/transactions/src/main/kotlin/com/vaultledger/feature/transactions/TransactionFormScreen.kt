@@ -235,7 +235,7 @@ fun TransactionFormScreen(
                     label = { Text("Amount") },
                     leadingIcon = {
                         Text(
-                            text = "$",
+                            text = "₹",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

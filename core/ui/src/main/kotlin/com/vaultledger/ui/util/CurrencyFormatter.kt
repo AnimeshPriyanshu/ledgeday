@@ -11,6 +11,6 @@ object CurrencyFormatter {
             .chunked(3)
             .joinToString(",")
             .reversed()
-        return "$sign$$formattedDollars.${centsPart.toString().padStart(2, '0')}"
+        return "$sign₹$formattedDollars.${centsPart.toString().padStart(2, '0')}"
     }
 }

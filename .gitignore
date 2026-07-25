@@ -22,3 +22,5 @@ nul
 /feature/transactions/build
 /feature/settings/build
 app/google-services.json
+build.log
+build.log

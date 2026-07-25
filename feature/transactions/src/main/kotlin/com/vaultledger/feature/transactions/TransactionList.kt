@@ -42,6 +42,7 @@ fun TransactionList(
             when (item) {
                 is DateHeader -> "header_${item.label}"
                 is Transaction -> "txn_${item.id}"
+                else -> "unknown_${item::class.simpleName}_${System.identityHashCode(item)}"
             }
         }) { item ->
             when (item) {
