@@ -83,7 +83,7 @@ class SyncManagerTest {
         )
         workspaceRemote.emitWorkspaces(listOf(workspace))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val stored = workspaceDao.getAllWorkspacesSuspend()
@@ -114,7 +114,7 @@ class SyncManagerTest {
         workspaceRemote.emitWorkspaces(listOf(workspace))
         vaultRemote.emitVaults("ws-1", listOf(vault))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val stored = vaultDao.getVaultsByWorkspaceIdSuspend("ws-1")
@@ -152,7 +152,7 @@ class SyncManagerTest {
         vaultRemote.emitVaults("ws-1", listOf(vault))
         transactionRemote.emitTransactions("ws-1", "vault-1", listOf(txn))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val stored = transactionDao.getTransactionsByVaultIdSuspend("vault-1")
@@ -175,7 +175,7 @@ class SyncManagerTest {
         // First emit both transactions
         transactionRemote.emitTransactions(workspaceId, vaultId, listOf(removedTxn, keptTxn))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(2, transactionDao.getTransactionsByVaultIdSuspend(vaultId).size)
@@ -201,7 +201,7 @@ class SyncManagerTest {
         vaultRemote.emitVaults(workspaceId, listOf(vault))
         transactionRemote.emitTransactions(workspaceId, vaultId, listOf(txn))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, transactionDao.getTransactionsByVaultIdSuspend(vaultId).size)
 
@@ -228,7 +228,7 @@ class SyncManagerTest {
         vaultRemote.emitVaults(workspaceId, listOf(vault))
         transactionRemote.emitTransactions(workspaceId, vaultId, listOf(txn))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, transactionDao.getTransactionsByVaultIdSuspend(vaultId).size)
 
@@ -243,7 +243,7 @@ class SyncManagerTest {
         vaultRemote.emitVaults(workspaceId, listOf(vault))
         transactionRemote.emitTransactions(workspaceId, vaultId, emptyList())
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(0, transactionDao.getTransactionsByVaultIdSuspend(vaultId).size)
@@ -263,7 +263,7 @@ class SyncManagerTest {
         vaultRemote.emitVaults(workspaceId, listOf(vault))
         transactionRemote.emitTransactions(workspaceId, vaultId, listOf(inflow, outflow))
 
-        syncManager.startSyncing("user-1")
+        syncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         val balance = vaultDao.getBalanceSuspend(vaultId)
@@ -303,7 +303,7 @@ class SyncManagerTest {
             transactionDao = transactionDao,
         ).also { it.scope = CoroutineScope(SupervisorJob() + testDispatcher) }
 
-        customSyncManager.startSyncing("user-1")
+        customSyncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(1, callCount)
@@ -346,7 +346,7 @@ class SyncManagerTest {
             transactionDao = transactionDao,
         ).also { it.scope = CoroutineScope(SupervisorJob() + testDispatcher) }
 
-        customSyncManager.startSyncing("user-1")
+        customSyncManager.startSyncing("user-1", retryUnsynced = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals(1, callCount)
@@ -461,6 +461,17 @@ class FakeTransactionDao : TransactionDao {
         return transactions.values.filter { it.vaultId == vaultId }
             .sumOf { if (it.type == TransactionType.INFLOW) it.amount else -it.amount }
     }
+    override suspend fun getUnsyncedTransactions(): List<TransactionEntity> {
+        return transactions.values.filter { !it.synced }
+    }
+
+    override fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>> {
+        val lowerQuery = query.lowercase()
+        return flowOf(transactions.values.filter { it.vaultId == vaultId }
+            .filter { it.description.lowercase().contains(lowerQuery) || it.amount.toString().contains(lowerQuery) }
+            .sortedByDescending { it.createdAt })
+    }
+
     override fun observeBalanceForVault(vaultId: String): Flow<Long> {
         return flowOf(getBalanceForVaultSuspend(vaultId))
     }

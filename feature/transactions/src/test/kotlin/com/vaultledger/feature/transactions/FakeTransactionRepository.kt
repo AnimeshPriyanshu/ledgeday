@@ -21,6 +21,7 @@ class FakeTransactionRepository : TransactionRepository {
     var throwOnCreate: Boolean = false
     var throwOnGetById: Boolean = false
     var throwOnUpdate: Boolean = false
+    var throwOnSearch: Boolean = false
 
     override fun getTransactionsByVaultId(vaultId: String): Flow<List<Transaction>> {
         if (throwOnGetTransactions) {
@@ -68,6 +69,22 @@ class FakeTransactionRepository : TransactionRepository {
         if (throwOnDelete) throw RuntimeException("Failed to delete transaction")
         transactions.remove(id)
         versionFlow.value++
+    }
+
+    override fun searchTransactions(vaultId: String, query: String): Flow<List<Transaction>> {
+        if (throwOnSearch) {
+            return flow { throw RuntimeException("Failed to search transactions") }
+        }
+        val lowerQuery = query.lowercase()
+        return versionFlow.map {
+            transactions.values
+                .filter { it.vaultId == vaultId }
+                .filter { txn ->
+                    txn.description.lowercase().contains(lowerQuery) ||
+                        txn.amount.toString().contains(lowerQuery)
+                }
+                .sortedByDescending { it.createdAt }
+        }
     }
 
     override fun getVaultBalance(vaultId: String): Flow<Long> {

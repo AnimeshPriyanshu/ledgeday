@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -290,6 +291,110 @@ class VaultDetailViewModelTest {
 
             success = awaitItem()
             assertEquals(0L, (success as UiState.Success).data.balance)
+            cancel()
+        }
+    }
+
+    @Test
+    fun `searchQuery defaults to blank and isSearchActive false`() = runTest(testDispatcher) {
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+        assertEquals("", vm.searchQuery.value)
+        assertFalse(vm.uiState.value.let { it is UiState.Success && it.data.isSearchActive })
+    }
+
+    @Test
+    fun `onSearchQueryChange updates searchQuery flow`() = runTest(testDispatcher) {
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+        vm.onSearchQueryChange("test")
+        assertEquals("test", vm.searchQuery.value)
+    }
+
+    @Test
+    fun `clearSearch resets searchQuery to blank`() = runTest(testDispatcher) {
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+        vm.onSearchQueryChange("test")
+        vm.clearSearch()
+        assertEquals("", vm.searchQuery.value)
+    }
+
+    @Test
+    fun `empty searchQuery returns all transactions`() = runTest(testDispatcher) {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Alpha")
+        repository.createTransaction(vaultId, TransactionType.OUTFLOW, 50L, "Beta")
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+            val success = awaitItem()
+            assertInstanceOf(UiState.Success::class.java, success)
+            assertEquals(2, (success as UiState.Success).data.transactions.size)
+
+            vm.onSearchQueryChange("")
+            advanceUntilIdle()
+
+            // No re-emission since blank query has 0ms debounce and same result
+            cancel()
+        }
+    }
+
+    @Test
+    fun `searchQuery filters transactions by description`() = runTest(testDispatcher) {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Groceries")
+        repository.createTransaction(vaultId, TransactionType.OUTFLOW, 50L, "Gas bill")
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+            val success = awaitItem()
+            assertInstanceOf(UiState.Success::class.java, success)
+            assertEquals(2, (success as UiState.Success).data.transactions.size)
+
+            vm.onSearchQueryChange("gas")
+            advanceUntilIdle()
+
+            val filtered = awaitItem()
+            assertInstanceOf(UiState.Success::class.java, filtered)
+            val data = (filtered as UiState.Success).data
+            assertEquals(1, data.transactions.size)
+            assertEquals("Gas bill", data.transactions[0].description)
+            assertTrue(data.isSearchActive)
+            cancel()
+        }
+    }
+
+    @Test
+    fun `searchQuery is case-insensitive`() = runTest(testDispatcher) {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Groceries")
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+            awaitItem()
+
+            vm.onSearchQueryChange("GROCERIES")
+            advanceUntilIdle()
+
+            val filtered = awaitItem()
+            assertInstanceOf(UiState.Success::class.java, filtered)
+            assertEquals(1, (filtered as UiState.Success).data.transactions.size)
+            cancel()
+        }
+    }
+
+    @Test
+    fun `searchQuery no match shows Empty`() = runTest(testDispatcher) {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Groceries")
+        val vm = VaultDetailViewModel(savedStateHandle, repository)
+
+        vm.uiState.test {
+            assertEquals(UiState.Loading, awaitItem())
+            awaitItem()
+
+            vm.onSearchQueryChange("zzzzzz")
+            advanceUntilIdle()
+
+            val empty = awaitItem()
+            assertEquals(UiState.Empty, empty)
             cancel()
         }
     }

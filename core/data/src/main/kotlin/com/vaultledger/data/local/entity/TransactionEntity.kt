@@ -22,6 +22,7 @@ import com.vaultledger.domain.model.TransactionType
             value = ["vaultId", "createdAt"],
             orders = [Index.Order.ASC, Index.Order.DESC],
         ),
+        Index("description"),
     ],
 )
 data class TransactionEntity(

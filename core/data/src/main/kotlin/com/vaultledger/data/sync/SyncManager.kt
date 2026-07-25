@@ -17,7 +17,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -37,9 +39,16 @@ open class SyncManager @Inject constructor(
     internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val jobs = ConcurrentHashMap<String, Job>()
 
-    open fun startSyncing(uid: String) {
+    companion object {
+        private const val RETRY_INTERVAL_MS = 30_000L
+    }
+
+    open fun startSyncing(uid: String, retryUnsynced: Boolean = true) {
         stopSyncing()
         launchSync("workspaces") { syncWorkspaces(uid) }
+        if (retryUnsynced) {
+            launchSync("unsynced") { retryUnsyncedTransactionsLoop() }
+        }
     }
 
     private fun launchSync(key: String, block: suspend () -> Unit): Job {
@@ -119,6 +128,39 @@ open class SyncManager @Inject constructor(
             vaultDao.updateBalance(vaultId, balance)
         }
     }
+
+    private suspend fun retryUnsyncedTransactions() {
+        val unsynced = transactionDao.getUnsyncedTransactions()
+        for (entity in unsynced) {
+            try {
+                val vault = vaultDao.getVaultById(entity.vaultId) ?: continue
+                val workspaceId = vault.workspaceId
+                transactionRemoteDataSource.createTransaction(
+                    workspaceId, entity.vaultId, entity.toDomain(), entity.createdBy,
+                )
+                transactionDao.insert(entity.copy(synced = true))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    private suspend fun retryUnsyncedTransactionsLoop() {
+        while (true) {
+            retryUnsyncedTransactions()
+            delay(RETRY_INTERVAL_MS)
+        }
+    }
+
+    private fun TransactionEntity.toDomain(): Transaction = Transaction(
+        id = id,
+        vaultId = vaultId,
+        type = type,
+        amount = amount,
+        description = description,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
 
     private fun Workspace.toWorkspaceEntity() = WorkspaceEntity(
         id = id,

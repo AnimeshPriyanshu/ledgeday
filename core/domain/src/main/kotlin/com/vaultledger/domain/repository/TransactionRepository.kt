@@ -16,4 +16,5 @@ interface TransactionRepository {
     suspend fun updateTransaction(transaction: Transaction)
     suspend fun deleteTransaction(id: String)
     fun getVaultBalance(vaultId: String): Flow<Long>
+    fun searchTransactions(vaultId: String, query: String): Flow<List<Transaction>>
 }

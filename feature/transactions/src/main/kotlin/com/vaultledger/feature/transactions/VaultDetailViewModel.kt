@@ -8,15 +8,23 @@ import com.vaultledger.domain.repository.TransactionRepository
 import com.vaultledger.ui.common.UiOperation
 import com.vaultledger.ui.common.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 data class VaultDetailUiState(
     val transactions: List<Transaction>,
     val balance: Long,
+    val isSearchActive: Boolean = false,
 )
 
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class VaultDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -27,6 +35,9 @@ class VaultDetailViewModel @Inject constructor(
         "Missing vaultId navigation argument"
     }
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     private val operation = UiOperation<VaultDetailUiState>(viewModelScope)
     val uiState: StateFlow<UiState<VaultDetailUiState>> = operation.state
 
@@ -34,15 +45,34 @@ class VaultDetailViewModel @Inject constructor(
         observeTransactions()
     }
 
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+    }
+
     private fun observeTransactions() {
         operation.observe(
             provide = {
-                combine(
-                    repository.getTransactionsByVaultId(vaultId),
-                    repository.getVaultBalance(vaultId),
-                ) { transactions, balance ->
-                    VaultDetailUiState(transactions, balance)
-                }
+                _searchQuery
+                    .debounce { query -> if (query.isBlank()) 0L else 300L }
+                    .flatMapLatest { query ->
+                        val trimmed = query.trim()
+                        val transactionsFlow = if (trimmed.isEmpty()) {
+                            repository.getTransactionsByVaultId(vaultId)
+                        } else {
+                            repository.searchTransactions(vaultId, trimmed)
+                        }
+                        combine(transactionsFlow, repository.getVaultBalance(vaultId)) { transactions, balance ->
+                            VaultDetailUiState(
+                                transactions = transactions,
+                                balance = balance,
+                                isSearchActive = query.isNotBlank(),
+                            )
+                        }
+                    }
             },
             map = { state ->
                 if (state.transactions.isEmpty()) UiState.Empty else UiState.Success(state)

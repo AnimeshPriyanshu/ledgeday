@@ -36,6 +36,24 @@ interface TransactionDao {
     @Query("SELECT id FROM transactions WHERE vaultId = :vaultId")
     suspend fun getTransactionIdsByVaultId(vaultId: String): List<String>
 
+    @Query("SELECT * FROM transactions WHERE synced = 0")
+    suspend fun getUnsyncedTransactions(): List<TransactionEntity>
+
+    @Query(
+        """
+        SELECT t.* FROM transactions t
+        LEFT JOIN vaults v ON t.vaultId = v.id
+        WHERE t.vaultId = :vaultId
+        AND (
+            t.description LIKE '%' || :query || '%'
+            OR CAST(t.amount AS TEXT) LIKE '%' || :query || '%'
+            OR v.name LIKE '%' || :query || '%'
+        )
+        ORDER BY t.createdAt DESC
+        """
+    )
+    fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>>
+
     @Query(
         """
         SELECT COALESCE(

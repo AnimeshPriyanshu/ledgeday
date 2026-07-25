@@ -34,6 +34,10 @@ object DatabaseModule {
         db.execSQL("ALTER TABLE transactions ADD COLUMN createdBy TEXT NOT NULL DEFAULT ''")
     }
 
+    private val MIGRATION_3_4 = Migration(3, 4) { db ->
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_transactions_description ON transactions(description)")
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): VaultLedgerDatabase {
@@ -42,7 +46,7 @@ object DatabaseModule {
             VaultLedgerDatabase::class.java,
             "vault-ledger-db",
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
     }
 

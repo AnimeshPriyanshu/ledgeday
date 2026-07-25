@@ -4,13 +4,21 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vaultledger.data.local.VaultLedgerDatabase
+import com.vaultledger.data.local.entity.TransactionEntity
 import com.vaultledger.data.local.entity.VaultEntity
 import com.vaultledger.data.local.entity.WorkspaceEntity
+import com.vaultledger.data.remote.TransactionRemoteDataSource
+import com.vaultledger.domain.model.Transaction
 import com.vaultledger.domain.model.TransactionType
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -64,6 +72,9 @@ class TransactionRepositoryImplTest {
 
     @After
     fun tearDown() {
+        if (::repository.isInitialized) {
+            repository.syncScope.cancel()
+        }
         database.close()
     }
 
@@ -203,5 +214,133 @@ class TransactionRepositoryImplTest {
     fun balanceIsZero_forVaultWithNoTransactions() = runBlocking {
         val balance = repository.getVaultBalance(vaultId).first()
         assertEquals(0L, balance)
+    }
+
+    @Test
+    fun createTransaction_returnsImmediately_whenFirestoreIsOffline() = runBlocking {
+        val neverCompletingRemote = object : TransactionRemoteDataSource() {
+            override suspend fun createTransaction(
+                workspaceId: String,
+                vaultId: String,
+                transaction: Transaction,
+                createdBy: String,
+            ) {
+                awaitCancellation()
+            }
+        }
+
+        val offlineRepository = TransactionRepositoryImpl(
+            transactionDao = database.transactionDao(),
+            vaultDao = database.vaultDao(),
+            database = database,
+            transactionRemoteDataSource = neverCompletingRemote,
+            firebaseAuth = null,
+        )
+
+        val result = withTimeoutOrNull(2000) {
+            offlineRepository.createTransaction(
+                vaultId = vaultId,
+                type = TransactionType.INFLOW,
+                amount = 1000L,
+                description = "Offline test",
+            )
+        }
+
+        assertNotNull("createTransaction must return immediately even when Firestore is down", result)
+        assertEquals(1000L, result!!.amount)
+
+        val balance = offlineRepository.getVaultBalance(vaultId).first()
+        assertEquals(1000L, balance)
+
+        offlineRepository.syncScope.cancel()
+    }
+
+    @Test
+    fun createTransaction_createsWithSyncedFalse() = runBlocking {
+        val txn = repository.createTransaction(
+            vaultId = vaultId,
+            type = TransactionType.INFLOW,
+            amount = 500L,
+            description = "Test synced flag",
+        )
+
+        val entity = database.transactionDao().getTransactionById(txn.id)
+        assertNotNull(entity)
+        assertFalse("New transaction must have synced = false", entity!!.synced)
+    }
+
+    @Test
+    fun updateTransaction_preservesSyncedState() = runBlocking {
+        val txn = repository.createTransaction(
+            vaultId = vaultId,
+            type = TransactionType.INFLOW,
+            amount = 500L,
+            description = "Original",
+        )
+
+        repository.updateTransaction(
+            txn.copy(amount = 1000L, description = "Updated"),
+        )
+
+        val entity = database.transactionDao().getTransactionById(txn.id)
+        assertNotNull(entity)
+        assertFalse("Updated transaction must have synced = false until Firestore confirms", entity!!.synced)
+    }
+
+    @Test
+    fun searchTransactions_emptyQuery_returnsAll() = runBlocking {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Alpha")
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 200L, "Beta")
+
+        val results = repository.searchTransactions(vaultId, "").first()
+
+        assertEquals(2, results.size)
+    }
+
+    @Test
+    fun searchTransactions_matchesDescription() = runBlocking {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "groceries")
+        repository.createTransaction(vaultId, TransactionType.OUTFLOW, 50L, "gas bill")
+
+        val results = repository.searchTransactions(vaultId, "groceries").first()
+
+        assertEquals(1, results.size)
+        assertEquals("groceries", results[0].description)
+    }
+
+    @Test
+    fun searchTransactions_caseInsensitive() = runBlocking {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Groceries")
+
+        val results = repository.searchTransactions(vaultId, "groceries").first()
+
+        assertEquals(1, results.size)
+    }
+
+    @Test
+    fun searchTransactions_matchesPartialDescription() = runBlocking {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "weekly groceries")
+
+        val results = repository.searchTransactions(vaultId, "grocer").first()
+
+        assertEquals(1, results.size)
+    }
+
+    @Test
+    fun searchTransactions_matchesAmount() = runBlocking {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 15000L, "Salary")
+
+        val results = repository.searchTransactions(vaultId, "15000").first()
+
+        assertEquals(1, results.size)
+    }
+
+    @Test
+    fun searchTransactions_whitespaceIgnored() = runBlocking {
+        repository.createTransaction(vaultId, TransactionType.INFLOW, 100L, "Groceries")
+
+        val results = repository.searchTransactions(vaultId, "  groceries  ").first()
+
+        assertEquals(1, results.size)
     }
 }

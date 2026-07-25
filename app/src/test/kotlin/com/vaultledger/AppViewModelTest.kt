@@ -138,6 +138,13 @@ private class FakeTransactionDao : TransactionDao {
     override fun getTransactionsByVaultId(vaultId: String): Flow<List<TransactionEntity>> = flowOf(data.values.filter { it.vaultId == vaultId })
     override suspend fun getTransactionById(id: String): TransactionEntity? = data[id]
     override suspend fun getTransactionIdsByVaultId(vaultId: String): List<String> = data.values.filter { it.vaultId == vaultId }.map { it.id }
+    override suspend fun getUnsyncedTransactions(): List<TransactionEntity> = data.values.filter { !it.synced }
+    override fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>> {
+        val lowerQuery = query.lowercase()
+        return flowOf(data.values.filter { it.vaultId == vaultId }
+            .filter { it.description.lowercase().contains(lowerQuery) || it.amount.toString().contains(lowerQuery) }
+            .sortedByDescending { it.createdAt })
+    }
     override suspend fun getBalanceForVault(vaultId: String): Long = data.values.filter { it.vaultId == vaultId }.sumOf { if (it.type == com.vaultledger.domain.model.TransactionType.INFLOW) it.amount else -it.amount }
     override fun observeBalanceForVault(vaultId: String): Flow<Long> = flowOf(getBalanceForVaultSuspend(vaultId))
     private fun getBalanceForVaultSuspend(vaultId: String): Long = data.values.filter { it.vaultId == vaultId }.sumOf { if (it.type == com.vaultledger.domain.model.TransactionType.INFLOW) it.amount else -it.amount }
@@ -161,7 +168,7 @@ class FakeSyncManager(
     var syncing = false
     var uid: String? = null
 
-    override fun startSyncing(uid: String) {
+    override fun startSyncing(uid: String, retryUnsynced: Boolean) {
         syncing = true
         this.uid = uid
     }
