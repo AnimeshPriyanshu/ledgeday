@@ -45,10 +45,12 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
 
     testImplementation(libs.junit5.api)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.core.testing)
+    testImplementation(libs.turbine)
     testRuntimeOnly(libs.junit5.engine)
     testRuntimeOnly(libs.junit.platform.launcher)
 

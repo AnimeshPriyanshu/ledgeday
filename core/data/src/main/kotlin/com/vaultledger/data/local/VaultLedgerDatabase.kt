@@ -12,7 +12,7 @@ import com.vaultledger.data.local.entity.WorkspaceEntity
 
 @Database(
     entities = [WorkspaceEntity::class, VaultEntity::class, TransactionEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

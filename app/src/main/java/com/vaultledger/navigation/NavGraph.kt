@@ -2,8 +2,8 @@ package com.vaultledger.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -12,6 +12,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.vaultledger.AppViewModel
+import com.vaultledger.feature.settings.AcceptInviteScreen
+import com.vaultledger.feature.settings.InviteScreen
 import com.vaultledger.feature.settings.SettingsScreen
 import com.vaultledger.feature.transactions.TransactionFormScreen
 import com.vaultledger.feature.transactions.VaultDetailScreen
@@ -23,7 +25,7 @@ import com.vaultledger.ui.screen.SplashScreen
 @Composable
 fun AppNavGraph(navController: NavHostController) {
     val appViewModel: AppViewModel = hiltViewModel()
-    val isAuthenticated by appViewModel.isAuthenticated.collectAsState()
+    val isAuthenticated by appViewModel.isAuthenticated.collectAsStateWithLifecycle()
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
 
     // Auth guard: redirect unauthenticated users from protected routes
@@ -138,13 +140,38 @@ fun AppNavGraph(navController: NavHostController) {
         // Settings
         composable(Routes.SETTINGS) {
             SettingsScreen(
-                onNavigateToInvite = {},
+                onNavigateToInvite = {
+                    navController.navigate(Routes.INVITE)
+                },
+                onNavigateToAcceptInvite = {
+                    navController.navigate(Routes.ACCEPT_INVITE)
+                },
                 onLogout = {
                     navController.navigate(Routes.AUTH) {
                         popUpTo(Routes.WORKSPACES) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
+            )
+        }
+
+        // Invite Partner
+        composable(Routes.INVITE) {
+            InviteScreen(
+                onNavigateBack = { navController.popBackStack() },
+            )
+        }
+
+        // Accept Invite
+        composable(Routes.ACCEPT_INVITE) {
+            AcceptInviteScreen(
+                onNavigateToWorkspaces = {
+                    navController.navigate(Routes.WORKSPACES) {
+                        popUpTo(Routes.WORKSPACES) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }

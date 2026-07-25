@@ -25,4 +25,6 @@ data class VaultEntity(
     val createdAt: Long,
     val balance: Long = 0L,
     val color: String = "#006D77",
+    val synced: Boolean = false,
+    val updatedAt: Long = 0L,
 )

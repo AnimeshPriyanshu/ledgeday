@@ -8,5 +8,6 @@ data class Workspace(
     val name: String,
     val description: String,
     val createdAt: Long,
+    val memberIds: List<String> = emptyList(),
     val vaultCount: Int = 0,
 )

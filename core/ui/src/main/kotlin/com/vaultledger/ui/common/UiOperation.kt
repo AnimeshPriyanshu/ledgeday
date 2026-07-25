@@ -37,6 +37,7 @@ class UiOperation<T>(
             try {
                 block()
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.value = UiState.Error(e.message ?: "Operation failed")
             }
         }
@@ -58,12 +59,14 @@ class UiOperation<T>(
                 provider()
                     .map { data -> mapper(data) }
                     .catch { e ->
+                        if (e is kotlinx.coroutines.CancellationException) throw e
                         _state.value = UiState.Error(e.message ?: "An error occurred")
                     }
                     .collect { uiState ->
                         _state.value = uiState
                     }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.value = UiState.Error(e.message ?: "An error occurred")
             }
         }

@@ -31,4 +31,7 @@ data class TransactionEntity(
     val amount: Long,
     val description: String,
     val createdAt: Long,
+    val updatedAt: Long = 0L,
+    val synced: Boolean = false,
+    val createdBy: String = "",
 )

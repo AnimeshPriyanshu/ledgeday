@@ -8,6 +8,8 @@ object Routes {
     const val VAULT_DETAIL = "vaults/{vaultId}"
     const val TRANSACTION_FORM = "vaults/{vaultId}/transaction?transactionId={transactionId}"
     const val SETTINGS = "settings"
+    const val INVITE = "settings/invite"
+    const val ACCEPT_INVITE = "settings/accept-invite"
 
     // Argument names
     const val ARG_WORKSPACE_ID = "workspaceId"

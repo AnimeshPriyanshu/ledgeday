@@ -15,6 +15,9 @@ interface WorkspaceDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(workspace: WorkspaceEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(workspaces: List<WorkspaceEntity>)
+
     @Update
     suspend fun update(workspace: WorkspaceEntity)
 
@@ -26,4 +29,10 @@ interface WorkspaceDao {
 
     @Query("SELECT * FROM workspaces WHERE id = :id")
     suspend fun getWorkspaceById(id: String): WorkspaceEntity?
+
+    @Query("SELECT * FROM workspaces WHERE synced = 0")
+    suspend fun getUnsyncedWorkspaces(): List<WorkspaceEntity>
+
+    @Query("SELECT id FROM workspaces WHERE memberIds = :emptyList")
+    suspend fun getWorkspaceIdsWithEmptyMemberIds(emptyList: String = "[]"): List<String>
 }

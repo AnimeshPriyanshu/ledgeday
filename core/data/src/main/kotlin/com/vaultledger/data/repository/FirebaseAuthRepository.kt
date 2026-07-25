@@ -19,10 +19,17 @@ import kotlin.coroutines.resumeWithException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@Singleton
-class FirebaseAuthRepository @Inject constructor() : AuthRepository {
+import com.vaultledger.data.local.VaultLedgerDatabase
+import com.vaultledger.data.sync.SyncManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+@Singleton
+class FirebaseAuthRepository @Inject constructor(
+    private val firebaseAuth: FirebaseAuth,
+    private val syncManager: SyncManager? = null,
+    private val database: VaultLedgerDatabase? = null,
+) : AuthRepository {
 
     override fun observeAuthState(): Flow<User?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -69,6 +76,12 @@ class FirebaseAuthRepository @Inject constructor() : AuthRepository {
     }
 
     override suspend fun signOut() {
+        syncManager?.stopSyncing()
+        database?.let { db ->
+            withContext(Dispatchers.IO) {
+                db.clearAllTables()
+            }
+        }
         firebaseAuth.signOut()
     }
 }

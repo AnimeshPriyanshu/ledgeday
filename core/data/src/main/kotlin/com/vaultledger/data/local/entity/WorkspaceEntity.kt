@@ -9,4 +9,7 @@ data class WorkspaceEntity(
     val name: String,
     val description: String,
     val createdAt: Long,
+    val memberIds: List<String> = emptyList(),
+    val synced: Boolean = false,
+    val updatedAt: Long = 0L,
 )

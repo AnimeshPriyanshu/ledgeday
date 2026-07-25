@@ -23,6 +23,17 @@ object DatabaseModule {
         db.execSQL("ALTER TABLE vaults ADD COLUMN color TEXT NOT NULL DEFAULT '#006D77'")
     }
 
+    private val MIGRATION_2_3 = Migration(2, 3) { db ->
+        db.execSQL("ALTER TABLE workspaces ADD COLUMN memberIds TEXT NOT NULL DEFAULT '[]'")
+        db.execSQL("ALTER TABLE workspaces ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE workspaces ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE vaults ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE vaults ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE transactions ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE transactions ADD COLUMN synced INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE transactions ADD COLUMN createdBy TEXT NOT NULL DEFAULT ''")
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): VaultLedgerDatabase {
@@ -31,7 +42,7 @@ object DatabaseModule {
             VaultLedgerDatabase::class.java,
             "vault-ledger-db",
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
     }
 

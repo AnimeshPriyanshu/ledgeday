@@ -74,6 +74,7 @@ class TransactionFormViewModel @Inject constructor(
                     _state.update { it.copy(isLoading = false, loadError = "Transaction not found") }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update {
                     it.copy(isLoading = false, loadError = e.message ?: "Failed to load transaction")
                 }
@@ -139,6 +140,7 @@ class TransactionFormViewModel @Inject constructor(
                 }
                 _state.update { it.copy(isSaving = false, saveSuccess = true) }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _state.update {
                     it.copy(isSaving = false, saveError = e.message ?: "Failed to save transaction")
                 }

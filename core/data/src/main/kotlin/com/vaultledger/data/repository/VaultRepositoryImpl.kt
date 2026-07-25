@@ -2,8 +2,10 @@ package com.vaultledger.data.repository
 
 import com.vaultledger.data.local.dao.VaultDao
 import com.vaultledger.data.local.entity.VaultEntity
+import com.vaultledger.data.remote.VaultRemoteDataSource
 import com.vaultledger.domain.model.Vault
 import com.vaultledger.domain.repository.VaultRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -13,6 +15,7 @@ import javax.inject.Singleton
 @Singleton
 class VaultRepositoryImpl @Inject constructor(
     private val vaultDao: VaultDao,
+    private val vaultRemoteDataSource: VaultRemoteDataSource? = null,
 ) : VaultRepository {
 
     override fun getVaultsByWorkspaceId(workspaceId: String): Flow<List<Vault>> {
@@ -40,8 +43,22 @@ class VaultRepositoryImpl @Inject constructor(
             createdAt = now,
             balance = 0L,
             color = color,
+            synced = false,
+            updatedAt = now,
         )
         vaultDao.insert(entity)
+
+        if (vaultRemoteDataSource != null) {
+            try {
+                vaultRemoteDataSource.createVault(workspaceId, entity.toDomain())
+                val syncedEntity = entity.copy(synced = true)
+                vaultDao.insert(syncedEntity)
+                return syncedEntity.toDomain()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // Keep synced = false on failure
+            }
+        }
         return entity.toDomain()
     }
 
