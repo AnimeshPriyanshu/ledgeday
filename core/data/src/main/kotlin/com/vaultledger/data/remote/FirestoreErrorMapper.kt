@@ -1,5 +1,6 @@
 package com.vaultledger.data.remote
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.vaultledger.data.repository.exception.FirestoreTimeoutException
 import com.vaultledger.data.repository.exception.OfflineException
@@ -7,6 +8,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.retryWhen
 import kotlin.math.min
+
+private const val TAG = "FirestoreRetry"
 
 object FirestoreErrorMapper {
 
@@ -129,9 +132,17 @@ fun unwrapFirestoreException(throwable: Throwable): FirebaseFirestoreException? 
 }
 
 fun <T> Flow<T>.retryFirestoreTransient(maxRetries: Int = 5): Flow<T> = retryWhen { cause, attempt ->
-    if (!isTransientFirestoreError(cause) || attempt >= maxRetries) false
-    else {
-        delay(min(1000L * (1L shl attempt.toInt()), 30000L))
+    if (!isTransientFirestoreError(cause) || attempt >= maxRetries) {
+        Log.w(TAG, "Not retrying: isTransient=${isTransientFirestoreError(cause)}, " +
+            "attempt=$attempt, maxRetries=$maxRetries, error=${cause.message}")
+        false
+    } else {
+        val delayMs = min(1000L * (1L shl attempt.toInt()), 30000L)
+        Log.w(TAG, "Retrying (attempt ${attempt + 1}/$maxRetries) in ${delayMs}ms: ${cause.message}")
+        if (cause is FirebaseFirestoreException) {
+            Log.w(TAG, "Firestore error code: ${cause.code}")
+        }
+        delay(delayMs)
         true
     }
 }
