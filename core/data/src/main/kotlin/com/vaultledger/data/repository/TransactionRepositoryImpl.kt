@@ -1,8 +1,10 @@
 package com.vaultledger.data.repository
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.room.withTransaction
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.vaultledger.data.local.VaultLedgerDatabase
 import com.vaultledger.data.local.dao.TransactionDao
 import com.vaultledger.data.local.dao.VaultDao
@@ -33,6 +35,10 @@ class TransactionRepositoryImpl @Inject constructor(
 
     @VisibleForTesting
     internal var syncScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    companion object {
+        private const val TAG = "TransactionRepo"
+    }
 
     override fun getTransactionsByVaultId(vaultId: String): Flow<List<Transaction>> {
         return transactionDao.getTransactionsByVaultId(vaultId).map { entities ->
@@ -107,6 +113,7 @@ class TransactionRepositoryImpl @Inject constructor(
         val vault = vaultDao.getVaultById(entity.vaultId)
         val workspaceId = vault?.workspaceId
 
+        Log.d(TAG, "deleteTransaction: locally deleting $id from vault ${entity.vaultId}")
         database.withTransaction {
             transactionDao.delete(entity)
             val balance = transactionDao.getBalanceForVault(entity.vaultId)
@@ -114,10 +121,23 @@ class TransactionRepositoryImpl @Inject constructor(
         }
 
         if (transactionRemoteDataSource != null && workspaceId != null) {
+            Log.d(TAG, "deleteTransaction: soft-deleting $id in Firestore")
             try {
                 transactionRemoteDataSource.softDeleteTransaction(workspaceId, entity.vaultId, id)
+                Log.d(TAG, "deleteTransaction: soft-delete succeeded for $id")
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                val isNotFound = e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.NOT_FOUND
+                if (isNotFound) {
+                    Log.d(TAG, "deleteTransaction: doc not found for $id (never synced), no re-insert needed")
+                } else {
+                    Log.e(TAG, "Failed to soft-delete transaction $id in Firestore, re-inserting into Room", e)
+                    database.withTransaction {
+                        transactionDao.insert(entity)
+                        val balance = transactionDao.getBalanceForVault(entity.vaultId)
+                        vaultDao.updateBalance(entity.vaultId, balance)
+                    }
+                }
             }
         }
     }
@@ -135,11 +155,26 @@ class TransactionRepositoryImpl @Inject constructor(
     private fun syncToFirestore(workspaceId: String, vaultId: String, entity: TransactionEntity) {
         syncScope.launch {
             try {
+                val current = transactionDao.getTransactionById(entity.id)
+                if (current == null) {
+                    Log.d(TAG, "syncToFirestore: transaction ${entity.id} was deleted, skipping sync")
+                    return@launch
+                }
                 transactionRemoteDataSource?.createTransaction(
                     workspaceId, vaultId, entity.toDomain(), entity.createdBy,
                 )
+                var wasDeleted = false
                 database.withTransaction {
-                    transactionDao.insert(entity.copy(synced = true))
+                    val stillExists = transactionDao.getTransactionById(entity.id)
+                    if (stillExists != null) {
+                        transactionDao.insert(entity.copy(synced = true))
+                    } else {
+                        wasDeleted = true
+                    }
+                }
+                if (wasDeleted) {
+                    Log.d(TAG, "syncToFirestore: entity ${entity.id} was deleted during sync, undoing Firestore doc")
+                    transactionRemoteDataSource?.softDeleteTransaction(workspaceId, vaultId, entity.id)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

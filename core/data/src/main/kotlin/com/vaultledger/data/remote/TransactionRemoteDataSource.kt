@@ -107,6 +107,7 @@ open class TransactionRemoteDataSource @Inject constructor() {
     }
 
     open suspend fun softDeleteTransaction(workspaceId: String, vaultId: String, transactionId: String) = suspendCancellableCoroutine<Unit> { cont ->
+        Log.d(TAG, "softDeleteTransaction: calling .update() on $transactionId in vault $vaultId")
         firestore
             .collection(transactionsPath(workspaceId, vaultId))
             .document(transactionId)
@@ -117,8 +118,13 @@ open class TransactionRemoteDataSource @Inject constructor() {
                 ),
             )
             .addOnCompleteListener { task ->
-                if (task.isSuccessful) cont.resume(Unit)
-                else cont.resumeWithException(task.exception ?: RuntimeException("Failed to delete transaction"))
+                if (task.isSuccessful) {
+                    Log.d(TAG, "softDeleteTransaction: .update() succeeded for $transactionId")
+                    cont.resume(Unit)
+                } else {
+                    Log.w(TAG, "softDeleteTransaction: .update() FAILED for $transactionId: ${task.exception?.message}")
+                    cont.resumeWithException(task.exception ?: RuntimeException("Failed to delete transaction"))
+                }
             }
     }
 
