@@ -54,10 +54,11 @@ service cloud.firestore {
         && request.resource.data.status == 'active'
         && request.resource.data.acceptedBy == null;
 
-      // READ: creator can read their invite; anyone can read an active invite (for acceptance)
+      // READ: creator can read their invite; anyone can read an active or accepted invite
       allow read: if isAuthenticated()
         && (resource.data.creatorId == request.auth.uid
-            || resource.data.status == 'active');
+            || resource.data.status == 'active'
+            || resource.data.status == 'accepted');
 
       // UPDATE: accept invite — only allowed to transition status to 'accepted'
       allow update: if isAuthenticated()
