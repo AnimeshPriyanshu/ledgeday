@@ -23,4 +23,12 @@ nul
 /feature/settings/build
 app/google-services.json
 build.log
-build.log
+
+# Firebase CLI generated
+.firebaserc
+firebase.json
+firestore.indexes.json
+
+# opencode
+.agents/
+skills-lock.json
