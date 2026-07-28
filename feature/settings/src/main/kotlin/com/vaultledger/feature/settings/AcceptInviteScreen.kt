@@ -15,7 +15,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -32,17 +31,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.vaultledger.ui.common.LocalSnackbarHostState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AcceptInviteScreen(
     onNavigateToWorkspaces: () -> Unit,
     onNavigateBack: () -> Unit,
+    initialCode: String? = null,
     viewModel: AcceptInviteViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    var codeInput by rememberSaveable { mutableStateOf("") }
+    val snackbarHostState = LocalSnackbarHostState.current
+    var codeInput by rememberSaveable { mutableStateOf(initialCode?.uppercase()?.take(8) ?: "") }
+
+    LaunchedEffect(initialCode) {
+        if (!initialCode.isNullOrBlank()) {
+            viewModel.acceptInvite(initialCode.uppercase().take(8))
+        }
+    }
 
     LaunchedEffect(state) {
         when (val s = state) {

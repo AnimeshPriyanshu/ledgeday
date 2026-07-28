@@ -23,7 +23,6 @@ object FirestoreConstants {
     const val FIELD_DELETED = "deleted"
     const val FIELD_UPDATED_AT = "updatedAt"
     const val FIELD_COLOR = "color"
-    const val FIELD_BALANCE = "balance"
     const val FIELD_INVITE_CODE = "inviteCode"
 
     const val DEFAULT_SHARED_WORKSPACE_NAME = "Shared Workspace"

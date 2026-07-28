@@ -1,5 +1,6 @@
 package com.vaultledger.feature.workspace
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vaultledger.domain.model.Workspace
@@ -12,6 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WorkspaceListViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
     private val repository: WorkspaceRepository,
 ) : ViewModel() {
 

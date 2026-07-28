@@ -1,5 +1,8 @@
 package com.vaultledger.data.repository
 
+import androidx.annotation.VisibleForTesting
+import androidx.room.withTransaction
+import com.vaultledger.data.local.VaultLedgerDatabase
 import com.vaultledger.data.local.dao.VaultDao
 import com.vaultledger.data.local.entity.VaultEntity
 import com.vaultledger.data.remote.VaultRemoteDataSource
@@ -16,6 +19,7 @@ import javax.inject.Singleton
 class VaultRepositoryImpl @Inject constructor(
     private val vaultDao: VaultDao,
     private val vaultRemoteDataSource: VaultRemoteDataSource? = null,
+    internal val database: VaultLedgerDatabase? = null,
 ) : VaultRepository {
 
     override fun getVaultsByWorkspaceId(workspaceId: String): Flow<List<Vault>> {
@@ -34,6 +38,8 @@ class VaultRepositoryImpl @Inject constructor(
         description: String,
         color: String,
     ): Vault {
+        require(workspaceId.isNotBlank()) { "workspaceId must not be blank" }
+        require(name.isNotBlank()) { "Vault name must not be blank" }
         val now = System.currentTimeMillis()
         val entity = VaultEntity(
             id = UUID.randomUUID().toString(),
@@ -46,17 +52,26 @@ class VaultRepositoryImpl @Inject constructor(
             synced = false,
             updatedAt = now,
         )
-        vaultDao.insert(entity)
+        val d = database
+        if (d != null) {
+            d.withTransaction { vaultDao.insert(entity) }
+        } else {
+            vaultDao.insert(entity)
+        }
 
         if (vaultRemoteDataSource != null) {
             try {
                 vaultRemoteDataSource.createVault(workspaceId, entity.toDomain())
-                val syncedEntity = entity.copy(synced = true)
-                vaultDao.insert(syncedEntity)
-                return syncedEntity.toDomain()
+                if (d != null) {
+                    d.withTransaction { vaultDao.insert(entity.copy(synced = true)) }
+                } else {
+                    vaultDao.insert(entity.copy(synced = true))
+                }
+                val synced = vaultDao.getVaultById(entity.id)
+                return synced?.toDomain() ?: entity.toDomain()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                // Keep synced = false on failure
+                // Keep synced = false on failure; SyncManager will retry
             }
         }
         return entity.toDomain()
@@ -73,6 +88,12 @@ class VaultRepositoryImpl @Inject constructor(
     override suspend fun deleteVault(id: String) {
         val entity = vaultDao.getVaultById(id) ?: return
         vaultDao.delete(entity)
+        try {
+            vaultRemoteDataSource?.deleteVault(entity.workspaceId, id)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            vaultDao.insert(entity)
+        }
     }
 }
 

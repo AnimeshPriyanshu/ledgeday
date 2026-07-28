@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.vaultledger.domain.model.Transaction
 import com.vaultledger.ui.common.ConfirmDeleteDialog
 import com.vaultledger.ui.common.ContentDescriptions
+import com.vaultledger.ui.common.Dimensions
 import com.vaultledger.ui.common.EmptyState
 import com.vaultledger.ui.common.ErrorState
 import com.vaultledger.ui.common.LocalSnackbarHostState
@@ -52,6 +54,7 @@ fun VaultDetailScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     var transactionToDelete by remember { mutableStateOf<Transaction?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
     val snackbarHostState = LocalSnackbarHostState.current
     val errorMessage = (uiState as? UiState.Error)?.message
 
@@ -61,6 +64,12 @@ fun VaultDetailScreen(
                 message = it,
                 duration = SnackbarDuration.Short,
             )
+        }
+    }
+
+    LaunchedEffect(uiState) {
+        if (isRefreshing && uiState !is UiState.Loading) {
+            isRefreshing = false
         }
     }
 
@@ -108,18 +117,19 @@ fun VaultDetailScreen(
                             IconButton(onClick = viewModel::clearSearch) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
-                                    contentDescription = "Clear search",
+                                    contentDescription = ContentDescriptions.ClearSearch,
                                 )
                             }
                         }
                     },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = Dimensions.SearchBarVerticalPadding),
                 )
             }
         },
@@ -135,60 +145,63 @@ fun VaultDetailScreen(
             }
         },
     ) { innerPadding ->
-        when (val state = uiState) {
-            is UiState.Loading -> {
-                ShimmerList(
-                    modifier = Modifier.padding(innerPadding),
-                    itemType = ShimmerItemType.TRANSACTION,
-                )
-            }
-
-            is UiState.Empty -> {
-                val hasSearch = searchQuery.isNotBlank()
-                if (hasSearch) {
-                    EmptyState(
-                        title = "No matching transactions",
-                        description = "Try a different search term.",
-                        modifier = Modifier.padding(innerPadding),
-                    )
-                } else {
-                    EmptyState(
-                        title = "No transactions yet",
-                        description = "Tap + to record your first.",
-                        modifier = Modifier.padding(innerPadding),
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.retry()
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            when (val state = uiState) {
+                is UiState.Loading -> {
+                    ShimmerList(
+                        itemType = ShimmerItemType.TRANSACTION,
                     )
                 }
-            }
 
-            is UiState.Success -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                ) {
-                    BalanceHeader(balance = state.data.balance)
-                    if (searchQuery.isNotBlank() && state.data.transactions.isEmpty()) {
+                is UiState.Empty -> {
+                    val hasSearch = searchQuery.isNotBlank()
+                    if (hasSearch) {
                         EmptyState(
                             title = "No matching transactions",
                             description = "Try a different search term.",
                         )
                     } else {
-                        TransactionList(
-                            transactions = state.data.transactions,
-                            onTransactionClick = onTransactionClick,
-                            onTransactionLongClick = { transactionToDelete = it },
-                            onAddTransactionClick = onAddTransactionClick,
+                        EmptyState(
+                            title = "No transactions yet",
+                            description = "Tap + to record your first.",
                         )
                     }
                 }
-            }
 
-            is UiState.Error -> {
-                ErrorState(
-                    message = state.message,
-                    onRetry = { viewModel.retry() },
-                    modifier = Modifier.padding(innerPadding),
-                )
+                is UiState.Success -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        BalanceHeader(balance = state.data.balance)
+                        if (searchQuery.isNotBlank() && state.data.transactions.isEmpty()) {
+                            EmptyState(
+                                title = "No matching transactions",
+                                description = "Try a different search term.",
+                            )
+                        } else {
+                            TransactionList(
+                                transactions = state.data.transactions,
+                                onTransactionClick = onTransactionClick,
+                                onTransactionLongClick = { transactionToDelete = it },
+                                onAddTransactionClick = onAddTransactionClick,
+                            )
+                        }
+                    }
+                }
+
+                is UiState.Error -> {
+                    ErrorState(
+                        message = state.message,
+                        onRetry = { viewModel.retry() },
+                    )
+                }
             }
         }
     }

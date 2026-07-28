@@ -2,6 +2,7 @@ package com.vaultledger.feature.settings
 
 import com.vaultledger.domain.model.User
 import com.vaultledger.domain.repository.AuthRepository
+import com.vaultledger.domain.repository.DeleteAccountResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -14,6 +15,10 @@ class FakeAuthRepository : AuthRepository {
     var throwOnSignOut: Boolean = false
     var signInError: String? = null
     var signUpError: String? = null
+
+    var deleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
+    var reauthDeleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
+    var currentUserEmail: String? = "test@example.com"
 
     override fun observeAuthState(): Flow<User?> = _authState
 
@@ -45,4 +50,10 @@ class FakeAuthRepository : AuthRepository {
         }
         _authState.value = null
     }
+
+    override suspend fun deleteAccount(): DeleteAccountResult = deleteAccountResult
+
+    override suspend fun reauthenticateAndDelete(password: String): DeleteAccountResult = reauthDeleteAccountResult
+
+    override suspend fun getCurrentUserEmail(): String? = currentUserEmail
 }

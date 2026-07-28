@@ -16,15 +16,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import java.util.UUID
 
 class EditDeleteJourneyTest {
-
     @get:Rule
     val composeTestRule = createComposeRule()
 
@@ -37,21 +36,25 @@ class EditDeleteJourneyTest {
 
     @Test
     fun editTransaction_showsExistingData() {
-        val txnId = runBlocking {
-            transactionRepo.createTransaction(
-                vaultId = "test-vault",
-                type = TransactionType.INFLOW,
-                amount = 1000L,
-                description = "Original",
-            ).id
-        }
+        val txnId =
+            runBlocking {
+                transactionRepo
+                    .createTransaction(
+                        vaultId = "test-vault",
+                        type = TransactionType.INFLOW,
+                        amount = 1000L,
+                        description = "Original",
+                    ).id
+            }
 
-        val viewModel = TransactionFormViewModel(
-            savedStateHandle = SavedStateHandle(
-                mapOf("vaultId" to "test-vault", "transactionId" to txnId),
-            ),
-            repository = transactionRepo,
-        )
+        val viewModel =
+            TransactionFormViewModel(
+                savedStateHandle =
+                    SavedStateHandle(
+                        mapOf("vaultId" to "test-vault", "transactionId" to txnId),
+                    ),
+                repository = transactionRepo,
+            )
 
         composeTestRule.setContent {
             TransactionFormScreen(
@@ -67,21 +70,25 @@ class EditDeleteJourneyTest {
 
     @Test
     fun editTransaction_canChangeAmount() {
-        val txnId = runBlocking {
-            transactionRepo.createTransaction(
-                vaultId = "test-vault",
-                type = TransactionType.INFLOW,
-                amount = 1000L,
-                description = "Original",
-            ).id
-        }
+        val txnId =
+            runBlocking {
+                transactionRepo
+                    .createTransaction(
+                        vaultId = "test-vault",
+                        type = TransactionType.INFLOW,
+                        amount = 1000L,
+                        description = "Original",
+                    ).id
+            }
 
-        val viewModel = TransactionFormViewModel(
-            savedStateHandle = SavedStateHandle(
-                mapOf("vaultId" to "test-vault", "transactionId" to txnId),
-            ),
-            repository = transactionRepo,
-        )
+        val viewModel =
+            TransactionFormViewModel(
+                savedStateHandle =
+                    SavedStateHandle(
+                        mapOf("vaultId" to "test-vault", "transactionId" to txnId),
+                    ),
+                repository = transactionRepo,
+            )
 
         composeTestRule.setContent {
             TransactionFormScreen(

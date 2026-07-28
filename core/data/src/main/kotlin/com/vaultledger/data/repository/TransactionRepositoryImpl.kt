@@ -16,6 +16,7 @@ import com.vaultledger.domain.repository.TransactionRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -34,7 +35,17 @@ class TransactionRepositoryImpl @Inject constructor(
 ) : TransactionRepository {
 
     @VisibleForTesting
+    internal var db: VaultLedgerDatabase? = database
+
+    @VisibleForTesting
     internal var syncScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val syncJobs = mutableListOf<Job>()
+
+    internal fun cancelPendingSyncs() {
+        Log.d(TAG, "cancelPendingSyncs: canceling ${syncJobs.size} pending sync job(s)")
+        syncJobs.toList().forEach { it.cancel() }
+        syncJobs.clear()
+    }
 
     companion object {
         private const val TAG = "TransactionRepo"
@@ -56,8 +67,10 @@ class TransactionRepositoryImpl @Inject constructor(
         amount: Long,
         description: String,
     ): Transaction {
+        require(amount >= 0) { "Transaction amount must be non-negative, got $amount" }
         val vault = vaultDao.getVaultById(vaultId)
-        val workspaceId = vault?.workspaceId
+            ?: throw IllegalArgumentException("Cannot create transaction: vault $vaultId not found")
+        val workspaceId = vault.workspaceId
         val currentUserId = try { firebaseAuth?.currentUser?.uid ?: "" } catch (_: Exception) { "" }
 
         val now = System.currentTimeMillis()
@@ -73,7 +86,7 @@ class TransactionRepositoryImpl @Inject constructor(
             createdBy = currentUserId,
         )
 
-        database.withTransaction {
+        db?.withTransaction {
             transactionDao.insert(entity)
             val balance = transactionDao.getBalanceForVault(vaultId)
             vaultDao.updateBalance(vaultId, balance)
@@ -93,7 +106,7 @@ class TransactionRepositoryImpl @Inject constructor(
             createdBy = existing?.createdBy ?: "",
         )
 
-        database.withTransaction {
+        db?.withTransaction {
             transactionDao.update(entity)
             val balance = transactionDao.getBalanceForVault(transaction.vaultId)
             vaultDao.updateBalance(transaction.vaultId, balance)
@@ -114,7 +127,7 @@ class TransactionRepositoryImpl @Inject constructor(
         val workspaceId = vault?.workspaceId
 
         Log.d(TAG, "deleteTransaction: locally deleting $id from vault ${entity.vaultId}")
-        database.withTransaction {
+        db?.withTransaction {
             transactionDao.delete(entity)
             val balance = transactionDao.getBalanceForVault(entity.vaultId)
             vaultDao.updateBalance(entity.vaultId, balance)
@@ -132,7 +145,7 @@ class TransactionRepositoryImpl @Inject constructor(
                     Log.d(TAG, "deleteTransaction: doc not found for $id (never synced), no re-insert needed")
                 } else {
                     Log.e(TAG, "Failed to soft-delete transaction $id in Firestore, re-inserting into Room", e)
-                    database.withTransaction {
+                    db?.withTransaction {
                         transactionDao.insert(entity)
                         val balance = transactionDao.getBalanceForVault(entity.vaultId)
                         vaultDao.updateBalance(entity.vaultId, balance)
@@ -152,8 +165,8 @@ class TransactionRepositoryImpl @Inject constructor(
         return transactionDao.observeBalanceForVault(vaultId)
     }
 
-    private fun syncToFirestore(workspaceId: String, vaultId: String, entity: TransactionEntity) {
-        syncScope.launch {
+    internal fun syncToFirestore(workspaceId: String, vaultId: String, entity: TransactionEntity) {
+        val job = syncScope.launch {
             try {
                 val current = transactionDao.getTransactionById(entity.id)
                 if (current == null) {
@@ -164,7 +177,7 @@ class TransactionRepositoryImpl @Inject constructor(
                     workspaceId, vaultId, entity.toDomain(), entity.createdBy,
                 )
                 var wasDeleted = false
-                database.withTransaction {
+                db?.withTransaction {
                     val stillExists = transactionDao.getTransactionById(entity.id)
                     if (stillExists != null) {
                         transactionDao.insert(entity.copy(synced = true))
@@ -181,6 +194,8 @@ class TransactionRepositoryImpl @Inject constructor(
                 // synced stays false; SyncManager will retry
             }
         }
+        syncJobs.add(job)
+        job.invokeOnCompletion { syncJobs.remove(job) }
     }
 }
 

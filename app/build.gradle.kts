@@ -67,14 +67,22 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.work.runtime.ktx)
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 
     testImplementation(libs.junit5.api)
+    testImplementation(libs.junit4)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.work.testing)
+    testImplementation(libs.test.core)
+    testImplementation(libs.robolectric)
     testRuntimeOnly(libs.junit5.engine)
+    testRuntimeOnly(libs.junit.vintage.engine)
     testRuntimeOnly(libs.junit.platform.launcher)
 
     androidTestImplementation(libs.test.ext.junit)

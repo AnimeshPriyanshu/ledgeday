@@ -3,7 +3,6 @@ package com.vaultledger.data.remote
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -97,12 +96,9 @@ class InviteRemoteDataSource @Inject constructor(
     suspend fun acceptInvite(code: String, accepterId: String): Workspace = suspendCancellableCoroutine { cont ->
         val inviteRef = firestore.collection(FirestoreConstants.COLLECTION_INVITES).document(code)
         val workspaceRef = firestore.collection(FirestoreConstants.COLLECTION_WORKSPACES).document()
-        Log.d(TAG, "acceptInvite: code=$code, accepterId=$accepterId, invitePath=${inviteRef.path}, workspacePath=${workspaceRef.path}")
 
         firestore.runTransaction { transaction ->
-            Log.d(TAG, "transaction: calling transaction.get(inviteRef) — path=${inviteRef.path}")
             val inviteSnapshot = transaction.get(inviteRef)
-            Log.d(TAG, "transaction: transaction.get succeeded, exists=${inviteSnapshot.exists()}")
 
             if (!inviteSnapshot.exists()) {
                 throw FirebaseFirestoreException("Invite not found", FirebaseFirestoreException.Code.NOT_FOUND)
@@ -137,9 +133,7 @@ class InviteRemoteDataSource @Inject constructor(
                 FirestoreConstants.FIELD_INVITE_CODE to code,
             )
 
-            Log.d(TAG, "transaction: calling transaction.set(workspaceRef) — path=${workspaceRef.path}, data=$workspaceData")
             transaction.set(workspaceRef, workspaceData)
-            Log.d(TAG, "transaction: calling transaction.update(inviteRef) — path=${inviteRef.path}")
             transaction.update(inviteRef, FirestoreConstants.FIELD_STATUS, "accepted", FirestoreConstants.FIELD_ACCEPTED_BY, accepterId)
 
             Workspace(
@@ -150,12 +144,8 @@ class InviteRemoteDataSource @Inject constructor(
                 memberIds = listOf(creatorId, accepterId),
             )
         }.addOnSuccessListener { workspace ->
-            Log.d(TAG, "transaction: success, workspace.id=${workspace.id}")
             cont.resume(workspace)
         }.addOnFailureListener { e ->
-            val code = (e as? FirebaseFirestoreException)?.code
-            Log.w(TAG, "transaction: FAILED. code=$code, message=${e.message}")
-            Log.w(TAG, "transaction: stack trace:", e)
             cont.resumeWithException(e)
         }
     }
@@ -211,6 +201,5 @@ class InviteRemoteDataSource @Inject constructor(
 
     private companion object {
         val ALLOWED_CHARS = ('A'..'Z').toList() + ('0'..'9').toList()
-        private const val TAG = "InviteRemoteDS"
     }
 }

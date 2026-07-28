@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -32,9 +33,9 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,9 +43,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultledger.domain.model.Vault
 import com.vaultledger.ui.common.ConfirmDeleteDialog
 import com.vaultledger.ui.common.ContentDescriptions
@@ -68,6 +70,7 @@ fun VaultListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
     var vaultToDelete by remember { mutableStateOf<Vault?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
     val snackbarHostState = LocalSnackbarHostState.current
     val errorMessage = (uiState as? UiState.Error)?.message
 
@@ -77,6 +80,12 @@ fun VaultListScreen(
                 message = it,
                 duration = SnackbarDuration.Short,
             )
+        }
+    }
+
+    LaunchedEffect(uiState) {
+        if (isRefreshing && uiState !is UiState.Loading) {
+            isRefreshing = false
         }
     }
 
@@ -105,7 +114,7 @@ fun VaultListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Vaults") },
+                title = { Text("Vaults", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                     Icon(
@@ -116,6 +125,7 @@ fun VaultListScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 ),
             )
         },
@@ -123,46 +133,55 @@ fun VaultListScreen(
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary,
-            ) {                    Icon(
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.padding(bottom = Dimensions.SpacingSmall),
+            ) {
+                Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = ContentDescriptions.CreateVault,
                 )
             }
         },
     ) { innerPadding ->
-            when (val state = uiState) {
-                is UiState.Loading -> {
-                    ShimmerList(
-                        modifier = Modifier.padding(innerPadding),
-                        itemType = ShimmerItemType.VAULT,
-                    )
-                }
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.retry()
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                when (val state = uiState) {
+                    is UiState.Loading -> {
+                        ShimmerList(
+                            itemType = ShimmerItemType.VAULT,
+                        )
+                    }
 
-                is UiState.Empty -> {
-                    EmptyState(
-                        title = "No vaults in this workspace",
-                        description = "Tap + to add one.",
-                        modifier = Modifier.padding(innerPadding),
-                    )
-                }
+                    is UiState.Empty -> {
+                        EmptyState(
+                            title = "No vaults in this workspace",
+                            description = "Tap + to add one.",
+                        )
+                    }
 
-                is UiState.Success -> {
-                    VaultList(
-                        vaults = state.data,
-                        onVaultClick = onVaultClick,
-                        onVaultLongClick = { vaultToDelete = it },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                    )
-                }
+                    is UiState.Success -> {
+                        VaultList(
+                            vaults = state.data,
+                            onVaultClick = onVaultClick,
+                            onVaultLongClick = { vaultToDelete = it },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
 
-                is UiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.retry() },
-                        modifier = Modifier.padding(innerPadding),
-                    )
+                    is UiState.Error -> {
+                        ErrorState(
+                            message = state.message,
+                            onRetry = { viewModel.retry() },
+                        )
+                    }
                 }
             }
     }
@@ -189,41 +208,50 @@ private fun VaultList(
                         onClick = { onVaultClick(vault.id) },
                         onLongClick = { onVaultLongClick(vault) },
                     ),
+                shape = MaterialTheme.shapes.medium,
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = Dimensions.CardElevation,
+                ),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(Dimensions.CardPadding),
+                        .padding(Dimensions.CardContentPadding),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(Dimensions.ColorDotSize)
                             .clip(CircleShape)
                             .background(VaultColors.fromHex(vault.color)),
                     )
-                    Spacer(modifier = Modifier.width(Dimensions.SpacingSmall + 4.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = vault.name,
                             style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         if (vault.description.isNotBlank()) {
                             Text(
                                 text = vault.description,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.width(Dimensions.SpacingSmall))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = formatBalance(vault.balance),
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = if (vault.balance >= 0) {
                             MaterialTheme.colorScheme.primary
                         } else {

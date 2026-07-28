@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -29,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -358,31 +360,224 @@ class SyncManagerTest {
 
         assertEquals(2, callCount)
     }
+
+    @Test
+    fun `retryUnsyncedWorkspaces creates unsynced workspace in Firestore`() = runTest(testDispatcher) {
+        val entity = WorkspaceEntity(
+            id = "ws-unsynced",
+            name = "Offline WS",
+            description = "",
+            createdAt = 1000L,
+            memberIds = listOf("user-1"),
+            synced = false,
+        )
+        workspaceDao.insert(entity)
+
+        syncManager.retryUnsyncedWorkspaces()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(workspaceRemote.createWorkspaceCalled)
+        val stored = workspaceDao.getWorkspaceById("ws-unsynced")
+        assertTrue(stored?.synced ?: false)
+    }
+
+    @Test
+    fun `retryUnsyncedWorkspaces skips deleted workspace`() = runTest(testDispatcher) {
+        val entity = WorkspaceEntity(
+            id = "ws-deleted",
+            name = "Deleted WS",
+            description = "",
+            createdAt = 1000L,
+            memberIds = listOf("user-1"),
+            synced = false,
+        )
+        workspaceDao.insert(entity)
+        workspaceDao.delete(entity)
+
+        syncManager.retryUnsyncedWorkspaces()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(workspaceRemote.createWorkspaceCalled)
+    }
+
+    @Test
+    fun `retryUnsyncedWorkspaces compensates delete when workspace deleted during write`() = runTest(testDispatcher) {
+        val entity = WorkspaceEntity(
+            id = "ws-comp",
+            name = "Comp WS",
+            description = "",
+            createdAt = 1000L,
+            memberIds = listOf("user-1"),
+            synced = false,
+        )
+        workspaceDao.insert(entity)
+        workspaceRemote.onBeforeCreateWorkspace = {
+            workspaceDao.delete(entity)
+        }
+
+        syncManager.retryUnsyncedWorkspaces()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(workspaceRemote.createWorkspaceCalled)
+        assertTrue(workspaceRemote.deleteWorkspaceCalled)
+    }
+
+    @Test
+    fun `retryUnsyncedWorkspaces leaves synced false on failure`() = runTest(testDispatcher) {
+        val entity = WorkspaceEntity(
+            id = "ws-fail",
+            name = "Fail WS",
+            description = "",
+            createdAt = 1000L,
+            memberIds = listOf("user-1"),
+            synced = false,
+        )
+        workspaceDao.insert(entity)
+        workspaceRemote.shouldFail = true
+
+        syncManager.retryUnsyncedWorkspaces()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val stored = workspaceDao.getWorkspaceById("ws-fail")
+        assertFalse(stored?.synced ?: true)
+    }
+
+    @Test
+    fun `retryUnsyncedVaults creates unsynced vault in Firestore`() = runTest(testDispatcher) {
+        val wsEntity = WorkspaceEntity(id = "ws-1", name = "WS", description = "", createdAt = 1000L, synced = true)
+        workspaceDao.insert(wsEntity)
+        val entity = VaultEntity(
+            id = "vault-unsynced",
+            workspaceId = "ws-1",
+            name = "Offline Vault",
+            description = "",
+            createdAt = 1000L,
+            color = "#006D77",
+            synced = false,
+        )
+        vaultDao.insert(entity)
+
+        syncManager.retryUnsyncedVaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vaultRemote.createVaultCalled)
+        val stored = vaultDao.getVaultById("vault-unsynced")
+        assertTrue(stored?.synced ?: false)
+    }
+
+    @Test
+    fun `retryUnsyncedVaults skips deleted vault`() = runTest(testDispatcher) {
+        val wsEntity = WorkspaceEntity(id = "ws-1", name = "WS", description = "", createdAt = 1000L, synced = true)
+        workspaceDao.insert(wsEntity)
+        val entity = VaultEntity(
+            id = "vault-deleted", workspaceId = "ws-1", name = "Deleted", description = "", createdAt = 1000L, synced = false,
+        )
+        vaultDao.insert(entity)
+        vaultDao.delete(entity)
+
+        syncManager.retryUnsyncedVaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(vaultRemote.createVaultCalled)
+    }
+
+    @Test
+    fun `retryUnsyncedVaults compensates delete when vault deleted during write`() = runTest(testDispatcher) {
+        val wsEntity = WorkspaceEntity(id = "ws-1", name = "WS", description = "", createdAt = 1000L, synced = true)
+        workspaceDao.insert(wsEntity)
+        val entity = VaultEntity(
+            id = "vault-comp", workspaceId = "ws-1", name = "Comp", description = "", createdAt = 1000L, synced = false,
+        )
+        vaultDao.insert(entity)
+        vaultRemote.onBeforeCreateVault = {
+            vaultDao.delete(entity)
+        }
+
+        syncManager.retryUnsyncedVaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vaultRemote.createVaultCalled)
+        assertTrue(vaultRemote.deleteVaultCalled)
+    }
+
+    @Test
+    fun `retryUnsyncedVaults leaves synced false on failure`() = runTest(testDispatcher) {
+        val wsEntity = WorkspaceEntity(id = "ws-1", name = "WS", description = "", createdAt = 1000L, synced = true)
+        workspaceDao.insert(wsEntity)
+        val entity = VaultEntity(
+            id = "vault-fail", workspaceId = "ws-1", name = "Fail", description = "", createdAt = 1000L, synced = false,
+        )
+        vaultDao.insert(entity)
+        vaultRemote.shouldFail = true
+
+        syncManager.retryUnsyncedVaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val stored = vaultDao.getVaultById("vault-fail")
+        assertFalse(stored?.synced ?: true)
+    }
 }
 
 // ===== Fake Implementations =====
 
 class FakeWorkspaceRemoteDataSource : WorkspaceRemoteDataSource() {
-    private val _workspaces = MutableStateFlow<List<Workspace>>(emptyList())
+    private val _workspaces = MutableSharedFlow<List<Workspace>>(replay = 1, extraBufferCapacity = 1)
+    var createWorkspaceCalled = false
+    var deleteWorkspaceCalled = false
+    var updateWorkspaceCalled = false
+    var shouldFail = false
+    var onBeforeCreateWorkspace: suspend () -> Unit = {}
 
     fun emitWorkspaces(workspaces: List<Workspace>) {
-        _workspaces.value = workspaces
+        _workspaces.tryEmit(workspaces)
     }
 
     override fun observeWorkspacesForMember(memberId: String): Flow<List<Workspace>> {
         return _workspaces
     }
+
+    override suspend fun createWorkspace(workspace: Workspace, creatorId: String) {
+        onBeforeCreateWorkspace()
+        createWorkspaceCalled = true
+        if (shouldFail) throw RuntimeException("Simulated failure")
+    }
+
+    override suspend fun deleteWorkspace(workspaceId: String) {
+        deleteWorkspaceCalled = true
+        if (shouldFail) throw RuntimeException("Simulated failure")
+    }
+
+    override suspend fun updateWorkspace(workspace: Workspace) {
+        updateWorkspaceCalled = true
+        if (shouldFail) throw RuntimeException("Simulated failure")
+    }
 }
 
 class FakeVaultRemoteDataSource : VaultRemoteDataSource() {
-    private val streams = mutableMapOf<String, MutableStateFlow<List<Vault>>>()
+    private val streams = mutableMapOf<String, MutableSharedFlow<List<Vault>>>()
+    var createVaultCalled = false
+    var deleteVaultCalled = false
+    var shouldFail = false
+    var onBeforeCreateVault: suspend () -> Unit = {}
 
     fun emitVaults(workspaceId: String, vaults: List<Vault>) {
-        streams.getOrPut(workspaceId) { MutableStateFlow(emptyList()) }.value = vaults
+        streams.getOrPut(workspaceId) { MutableSharedFlow<List<Vault>>(replay = 1, extraBufferCapacity = 1) }
+            .tryEmit(vaults)
     }
 
     override fun observeVaults(workspaceId: String): Flow<List<Vault>> {
-        return streams.getOrPut(workspaceId) { MutableStateFlow(emptyList()) }
+        return streams.getOrPut(workspaceId) { MutableSharedFlow<List<Vault>>(replay = 1, extraBufferCapacity = 1) }
+    }
+
+    override suspend fun createVault(workspaceId: String, vault: Vault) {
+        onBeforeCreateVault()
+        createVaultCalled = true
+        if (shouldFail) throw RuntimeException("Simulated failure")
+    }
+
+    override suspend fun deleteVault(workspaceId: String, vaultId: String) {
+        deleteVaultCalled = true
+        if (shouldFail) throw RuntimeException("Simulated failure")
     }
 }
 
@@ -418,9 +613,6 @@ class FakeWorkspaceDao : WorkspaceDao {
     override fun getAllWorkspaces(): Flow<List<WorkspaceEntity>> = flowOf(workspaces.values.toList())
     override suspend fun getWorkspaceById(id: String): WorkspaceEntity? = workspaces[id]
     override suspend fun getUnsyncedWorkspaces(): List<WorkspaceEntity> = workspaces.values.filter { !it.synced }
-    override suspend fun getWorkspaceIdsWithEmptyMemberIds(emptyList: String): List<String> {
-        return workspaces.values.filter { it.memberIds.isEmpty() }.map { it.id }
-    }
 
     fun getAllWorkspacesSuspend(): List<WorkspaceEntity> = workspaces.values.toList()
 }
@@ -436,6 +628,7 @@ class FakeVaultDao : VaultDao {
         return flowOf(vaults.values.filter { it.workspaceId == workspaceId })
     }
     override suspend fun getVaultById(id: String): VaultEntity? = vaults[id]
+    override suspend fun getUnsyncedVaults(): List<VaultEntity> = vaults.values.filter { !it.synced }
     override suspend fun updateBalance(id: String, balance: Long) { vaults[id]?.let { vaults[id] = it.copy(balance = balance) }; balanceMap[id] = balance }
 
     fun getVaultsByWorkspaceIdSuspend(workspaceId: String): List<VaultEntity> = vaults.values.filter { it.workspaceId == workspaceId }
@@ -465,7 +658,8 @@ class FakeTransactionDao : TransactionDao {
         return transactions.values.filter { !it.synced }
     }
 
-    override fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>> {
+    override fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>> = searchTransactionsInternal(vaultId, query.trim())
+    override fun searchTransactionsInternal(vaultId: String, query: String): Flow<List<TransactionEntity>> {
         val lowerQuery = query.lowercase()
         return flowOf(transactions.values.filter { it.vaultId == vaultId }
             .filter { it.description.lowercase().contains(lowerQuery) || it.amount.toString().contains(lowerQuery) }

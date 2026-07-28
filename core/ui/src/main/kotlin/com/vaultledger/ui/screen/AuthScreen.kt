@@ -76,7 +76,7 @@ fun AuthScreen(
         Icon(
             imageVector = Icons.Default.AccountBalance,
             contentDescription = ContentDescriptions.AppLogo,
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.primary,
         )
 

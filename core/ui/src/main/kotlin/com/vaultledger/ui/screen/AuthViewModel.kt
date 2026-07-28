@@ -30,6 +30,9 @@ class AuthViewModel @Inject constructor(
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
 
+    private var failedAttempts = 0
+    private var firstFailedTimestamp = 0L
+
     init {
         observeAuthState()
     }
@@ -79,10 +82,29 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    private fun checkRateLimit(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - firstFailedTimestamp > RATE_LIMIT_WINDOW_MS) {
+            failedAttempts = 0
+            firstFailedTimestamp = now
+        }
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+            _state.update { it.copy(error = "Too many attempts. Please try again later.") }
+            return false
+        }
+        return true
+    }
+
+    private fun recordFailure() {
+        if (failedAttempts == 0) firstFailedTimestamp = System.currentTimeMillis()
+        failedAttempts++
+    }
+
     fun signIn() {
         val current = _state.value
         if (!validate(current)) return
         if (current.isLoading) return
+        if (!checkRateLimit()) return
 
         _state.update { it.copy(isLoading = true, error = null) }
 
@@ -92,8 +114,10 @@ class AuthViewModel @Inject constructor(
                     email = current.email.trim(),
                     password = current.password,
                 )
+                failedAttempts = 0
                 _state.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
+                recordFailure()
                 _state.update {
                     it.copy(
                         isLoading = false,
@@ -108,6 +132,7 @@ class AuthViewModel @Inject constructor(
         val current = _state.value
         if (!validate(current)) return
         if (current.isLoading) return
+        if (!checkRateLimit()) return
 
         _state.update { it.copy(isLoading = true, error = null) }
 
@@ -117,8 +142,10 @@ class AuthViewModel @Inject constructor(
                     email = current.email.trim(),
                     password = current.password,
                 )
+                failedAttempts = 0
                 _state.update { it.copy(isLoading = false) }
             } catch (e: Exception) {
+                recordFailure()
                 _state.update {
                     it.copy(
                         isLoading = false,
@@ -173,5 +200,10 @@ class AuthViewModel @Inject constructor(
         }
 
         return valid
+    }
+
+    companion object {
+        private const val MAX_FAILED_ATTEMPTS = 5
+        private const val RATE_LIMIT_WINDOW_MS = 60_000L
     }
 }

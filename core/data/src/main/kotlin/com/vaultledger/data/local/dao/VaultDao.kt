@@ -27,6 +27,9 @@ interface VaultDao {
     @Query("SELECT * FROM vaults WHERE id = :id")
     suspend fun getVaultById(id: String): VaultEntity?
 
+    @Query("SELECT * FROM vaults WHERE synced = 0")
+    suspend fun getUnsyncedVaults(): List<VaultEntity>
+
     @Query("UPDATE vaults SET balance = :balance WHERE id = :id")
     suspend fun updateBalance(id: String, balance: Long)
 }

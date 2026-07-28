@@ -1,5 +1,6 @@
 package com.vaultledger.data.remote
 
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -13,12 +14,14 @@ class FirestoreErrorMapperTest {
     private val testDispatcher = StandardTestDispatcher()
 
     @Test
-    fun `retries non-throwable exceptions as transient`() = runTest(testDispatcher) {
+    fun `retries transient Firestore UNAVAILABLE errors`() = runTest(testDispatcher) {
         var attempts = 0
         val flow: Flow<Int> = flow<Int> {
             attempts++
             if (attempts <= 2) {
-                throw RuntimeException("network error")
+                throw FirebaseFirestoreException(
+                    "unavailable", FirebaseFirestoreException.Code.UNAVAILABLE,
+                )
             }
             emit(99)
         }.retryFirestoreTransient(maxRetries = 5)
@@ -32,18 +35,20 @@ class FirestoreErrorMapperTest {
     }
 
     @Test
-    fun `stops retrying after max retries`() = runTest(testDispatcher) {
+    fun `stops retrying after max retries for transient error`() = runTest(testDispatcher) {
         var attempts = 0
         val flow: Flow<Int> = flow<Int> {
             attempts++
-            throw RuntimeException("persistent error")
+            throw FirebaseFirestoreException(
+                "persistent", FirebaseFirestoreException.Code.UNAVAILABLE,
+            )
         }.retryFirestoreTransient(maxRetries = 2)
 
         try {
             flow.collect { }
             testDispatcher.scheduler.advanceUntilIdle()
-        } catch (e: RuntimeException) {
-            assertEquals("persistent error", e.message)
+        } catch (e: FirebaseFirestoreException) {
+            assertEquals("persistent", e.message)
         }
 
         assertEquals(3, attempts)
@@ -73,9 +78,32 @@ class FirestoreErrorMapperTest {
     }
 
     @Test
-    fun `isTransientFirestoreError returns true for non-Firestore exception`() {
+    fun `isTransientFirestoreError returns false for non-Firestore exception`() {
         val ex = RuntimeException("test")
-        assertEquals(true, isTransientFirestoreError(ex))
+        assertEquals(false, isTransientFirestoreError(ex))
     }
 
+    @Test
+    fun `unwrapFirestoreException unwraps cause chain`() {
+        val inner = FirebaseFirestoreException("inner", FirebaseFirestoreException.Code.UNAVAILABLE)
+        val outer = RuntimeException("outer", inner)
+        val unwrapped = unwrapFirestoreException(outer)
+        assertEquals(inner, unwrapped)
+    }
+
+    @Test
+    fun `retryFirestoreTransient does not retry non-Firestore errors`() = runTest(testDispatcher) {
+        var attempts = 0
+        val flow: Flow<Int> = flow<Int> {
+            attempts++
+            throw RuntimeException("non-firestore")
+        }.retryFirestoreTransient(maxRetries = 5)
+
+        try {
+            flow.collect { }
+            testDispatcher.scheduler.advanceUntilIdle()
+        } catch (_: RuntimeException) { }
+
+        assertEquals(1, attempts)
+    }
 }

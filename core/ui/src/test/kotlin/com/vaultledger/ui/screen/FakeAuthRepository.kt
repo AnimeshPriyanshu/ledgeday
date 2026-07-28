@@ -2,6 +2,7 @@ package com.vaultledger.ui.screen
 
 import com.vaultledger.domain.model.User
 import com.vaultledger.domain.repository.AuthRepository
+import com.vaultledger.domain.repository.DeleteAccountResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,9 @@ class FakeAuthRepository : AuthRepository {
     var signUpError: String? = null
 
     var throwOnObserveAuthState: Boolean = false
+
+    var deleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
+    var reauthDeleteAccountResult: DeleteAccountResult = DeleteAccountResult.Success
 
     data class RegisteredUser(
         val email: String,
@@ -70,6 +74,12 @@ class FakeAuthRepository : AuthRepository {
     override suspend fun signOut() {
         _currentUser.value = null
     }
+
+    override suspend fun deleteAccount(): DeleteAccountResult = deleteAccountResult
+
+    override suspend fun reauthenticateAndDelete(password: String): DeleteAccountResult = reauthDeleteAccountResult
+
+    override suspend fun getCurrentUserEmail(): String? = _currentUser.value?.email
 
     fun setAuthenticatedUser(user: User) {
         _currentUser.value = user

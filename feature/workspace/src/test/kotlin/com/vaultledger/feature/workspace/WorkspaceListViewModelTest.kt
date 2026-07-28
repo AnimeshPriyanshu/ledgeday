@@ -1,5 +1,6 @@
 package com.vaultledger.feature.workspace
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.vaultledger.domain.model.Workspace
 import com.vaultledger.ui.common.UiState
@@ -36,7 +37,7 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun `init emits Loading then Empty when no workspaces`() = runTest(testDispatcher) {
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
             assertEquals(UiState.Empty, awaitItem())
@@ -47,7 +48,7 @@ class WorkspaceListViewModelTest {
     @Test
     fun `init emits Loading then Success when workspaces exist`() = runTest(testDispatcher) {
         repository.createWorkspace("Test", "")
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
@@ -62,7 +63,7 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun `createWorkspace adds workspace to list`() = runTest(testDispatcher) {
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             skipItems(2)
@@ -81,7 +82,7 @@ class WorkspaceListViewModelTest {
     @Test
     fun `deleteWorkspace removes workspace from list`() = runTest(testDispatcher) {
         val created = repository.createWorkspace("To Delete", "")
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             skipItems(2)
@@ -97,7 +98,7 @@ class WorkspaceListViewModelTest {
     @Test
     fun `init emits Loading then Error when repository throws`() = runTest(testDispatcher) {
         repository.throwOnGetAll = true
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
@@ -111,7 +112,7 @@ class WorkspaceListViewModelTest {
 
     @Test
     fun `uiState transitions Loading to Empty to Success after create`() = runTest(testDispatcher) {
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
             assertEquals(UiState.Empty, awaitItem())
@@ -130,7 +131,7 @@ class WorkspaceListViewModelTest {
     @Test
     fun `retry after error transitions to Loading then Success`() = runTest(testDispatcher) {
         repository.throwOnGetAll = true
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
@@ -151,7 +152,7 @@ class WorkspaceListViewModelTest {
     fun `retry after error with data transitions to Loading then Success`() = runTest(testDispatcher) {
         repository.createWorkspace("Existing", "")
         repository.throwOnGetAll = true
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
@@ -175,7 +176,7 @@ class WorkspaceListViewModelTest {
     @Test
     fun `Loading emitted before retry when currently in Error`() = runTest(testDispatcher) {
         repository.throwOnGetAll = true
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())
@@ -195,7 +196,7 @@ class WorkspaceListViewModelTest {
     @Test
     fun `multiple retry calls do not cause duplicate emissions`() = runTest(testDispatcher) {
         repository.throwOnGetAll = true
-        val vm = WorkspaceListViewModel(repository)
+        val vm = WorkspaceListViewModel(SavedStateHandle(), repository)
 
         vm.uiState.test {
             assertEquals(UiState.Loading, awaitItem())

@@ -61,6 +61,16 @@ open class VaultRemoteDataSource @Inject constructor() {
             }
     }
 
+    open suspend fun deleteVault(workspaceId: String, vaultId: String) = kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+        firestore.collection("${FirestoreConstants.COLLECTION_WORKSPACES}/$workspaceId/${FirestoreConstants.COLLECTION_VAULTS}")
+            .document(vaultId)
+            .delete()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) cont.resume(Unit)
+                else cont.resumeWithException(task.exception ?: RuntimeException("Failed to delete vault"))
+            }
+    }
+
     private fun DocumentSnapshot.toVault(workspaceId: String): Vault? {
         if (!exists()) return null
         return Vault(

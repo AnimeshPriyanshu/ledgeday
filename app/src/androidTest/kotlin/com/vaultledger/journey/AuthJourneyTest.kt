@@ -98,6 +98,14 @@ class FakeAuthRepository : AuthRepository {
         _currentUser.value = User(id = found.id, email = found.email)
     }
 
+    override suspend fun deleteAccount(): com.vaultledger.domain.repository.DeleteAccountResult =
+        com.vaultledger.domain.repository.DeleteAccountResult.Success
+
+    override suspend fun reauthenticateAndDelete(password: String): com.vaultledger.domain.repository.DeleteAccountResult =
+        com.vaultledger.domain.repository.DeleteAccountResult.Success
+
+    override suspend fun getCurrentUserEmail(): String? = _currentUser.value?.email
+
     override suspend fun signUp(email: String, password: String) {
         if (registeredUsers.values.any { it.email == email }) {
             throw RuntimeException("An account with this email already exists.")

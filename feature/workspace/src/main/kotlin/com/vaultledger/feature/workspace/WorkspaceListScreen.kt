@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -24,18 +25,19 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaultledger.domain.model.Workspace
 import com.vaultledger.ui.common.ConfirmDeleteDialog
 import com.vaultledger.ui.common.ContentDescriptions
@@ -56,6 +58,7 @@ fun WorkspaceListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCreateDialog by remember { mutableStateOf(false) }
     var workspaceToDelete by remember { mutableStateOf<Workspace?>(null) }
+    var isRefreshing by remember { mutableStateOf(false) }
     val snackbarHostState = LocalSnackbarHostState.current
     val errorMessage = (uiState as? UiState.Error)?.message
 
@@ -65,6 +68,12 @@ fun WorkspaceListScreen(
                 message = it,
                 duration = SnackbarDuration.Short,
             )
+        }
+    }
+
+    LaunchedEffect(uiState) {
+        if (isRefreshing && uiState !is UiState.Loading) {
+            isRefreshing = false
         }
     }
 
@@ -93,9 +102,15 @@ fun WorkspaceListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Workspaces") },
+                title = {
+                    Text(
+                        "Workspaces",
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 ),
             )
         },
@@ -103,46 +118,55 @@ fun WorkspaceListScreen(
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary,
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.padding(bottom = Dimensions.SpacingSmall),
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = ContentDescriptions.CreateWorkspace,
                 )
             }
-        },        ) { innerPadding ->
-            when (val state = uiState) {
-                is UiState.Loading -> {
-                    ShimmerList(
-                        modifier = Modifier.padding(innerPadding),
-                        itemType = ShimmerItemType.CARD,
-                    )
-                }
+        },
+    ) { innerPadding ->
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = {
+                    isRefreshing = true
+                    viewModel.retry()
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                when (val state = uiState) {
+                    is UiState.Loading -> {
+                        ShimmerList(
+                            itemType = ShimmerItemType.CARD,
+                        )
+                    }
 
-                is UiState.Empty -> {
-                    EmptyState(
-                        title = "No workspaces yet",
-                        description = "Create one to get started.",
-                        modifier = Modifier.padding(innerPadding),
-                    )
-                }
+                    is UiState.Empty -> {
+                        EmptyState(
+                            title = "No workspaces yet",
+                            description = "Create one to get started.",
+                        )
+                    }
 
-                is UiState.Success -> {
-                    WorkspaceList(
-                        workspaces = state.data,
-                        onWorkspaceClick = onWorkspaceClick,
-                        onWorkspaceLongClick = { workspaceToDelete = it },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                    )
-                }
+                    is UiState.Success -> {
+                        WorkspaceList(
+                            workspaces = state.data,
+                            onWorkspaceClick = onWorkspaceClick,
+                            onWorkspaceLongClick = { workspaceToDelete = it },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
 
-                is UiState.Error -> {
-                    ErrorState(
-                        message = state.message,
-                        onRetry = { viewModel.retry() },
-                        modifier = Modifier.padding(innerPadding),
-                    )
+                    is UiState.Error -> {
+                        ErrorState(
+                            message = state.message,
+                            onRetry = { viewModel.retry() },
+                        )
+                    }
                 }
             }
     }
@@ -169,14 +193,23 @@ private fun WorkspaceList(
                         onClick = { onWorkspaceClick(workspace.id) },
                         onLongClick = { onWorkspaceLongClick(workspace) },
                     ),
+                shape = MaterialTheme.shapes.medium,
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = Dimensions.CardElevation,
+                ),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
             ) {
-                Column(                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(Dimensions.CardPadding),
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Dimensions.CardContentPadding),
                 ) {
                     Text(
                         text = workspace.name,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

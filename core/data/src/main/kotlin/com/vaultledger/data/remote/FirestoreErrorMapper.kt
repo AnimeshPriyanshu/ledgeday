@@ -1,6 +1,5 @@
 package com.vaultledger.data.remote
 
-import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.vaultledger.data.repository.exception.FirestoreTimeoutException
 import com.vaultledger.data.repository.exception.OfflineException
@@ -8,8 +7,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.retryWhen
 import kotlin.math.min
-
-private const val TAG = "FirestoreRetry"
 
 object FirestoreErrorMapper {
 
@@ -81,6 +78,10 @@ object FirestoreErrorMapper {
                 userMessage = "Unable to reach the server. Please try again.",
                 isRetryable = true,
             )
+            is IllegalArgumentException -> MappedError(
+                userMessage = throwable.message ?: "Invalid input provided.",
+                isRetryable = false,
+            )
             else -> mapFirestore(throwable)
         }
     }
@@ -107,15 +108,22 @@ object FirestoreErrorMapper {
     }
 
     private fun unwrap(throwable: Throwable): FirebaseFirestoreException? {
-        return when (throwable) {
-            is FirebaseFirestoreException -> throwable
-            else -> null
+        var current = throwable
+        while (true) {
+            when (current) {
+                is FirebaseFirestoreException -> return current
+                else -> {
+                    val cause = current.cause
+                    if (cause == null || cause === current) return null
+                    current = cause
+                }
+            }
         }
     }
 }
 
 fun isTransientFirestoreError(throwable: Throwable): Boolean {
-    val firestoreException = unwrapFirestoreException(throwable) ?: return true
+    val firestoreException = unwrapFirestoreException(throwable) ?: return false
     return firestoreException.code != FirebaseFirestoreException.Code.PERMISSION_DENIED &&
         firestoreException.code != FirebaseFirestoreException.Code.NOT_FOUND &&
         firestoreException.code != FirebaseFirestoreException.Code.INVALID_ARGUMENT &&
@@ -125,23 +133,24 @@ fun isTransientFirestoreError(throwable: Throwable): Boolean {
 }
 
 fun unwrapFirestoreException(throwable: Throwable): FirebaseFirestoreException? {
-    return when (throwable) {
-        is FirebaseFirestoreException -> throwable
-        else -> null
+    var current = throwable
+    while (true) {
+        when (current) {
+            is FirebaseFirestoreException -> return current
+            else -> {
+                val cause = current.cause
+                if (cause == null || cause === current) return null
+                current = cause
+            }
+        }
     }
 }
 
 fun <T> Flow<T>.retryFirestoreTransient(maxRetries: Int = 5): Flow<T> = retryWhen { cause, attempt ->
     if (!isTransientFirestoreError(cause) || attempt >= maxRetries) {
-        Log.w(TAG, "Not retrying: isTransient=${isTransientFirestoreError(cause)}, " +
-            "attempt=$attempt, maxRetries=$maxRetries, error=${cause.message}")
         false
     } else {
         val delayMs = min(1000L * (1L shl attempt.toInt()), 30000L)
-        Log.w(TAG, "Retrying (attempt ${attempt + 1}/$maxRetries) in ${delayMs}ms: ${cause.message}")
-        if (cause is FirebaseFirestoreException) {
-            Log.w(TAG, "Firestore error code: ${cause.code}")
-        }
         delay(delayMs)
         true
     }

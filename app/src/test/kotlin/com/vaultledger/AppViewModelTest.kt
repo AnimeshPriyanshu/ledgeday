@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
-
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var authRepository: FakeAuthRepository
     private lateinit var syncManager: FakeSyncManager
@@ -50,43 +49,47 @@ class AppViewModelTest {
     private fun createViewModel() = AppViewModel(authRepository, syncManager)
 
     @Test
-    fun `isAuthenticated starts as null`() = runTest(testDispatcher) {
-        val vm = createViewModel()
+    fun `isAuthenticated starts as null`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
 
-        assertNull(vm.isAuthenticated.value)
-    }
-
-    @Test
-    fun `isAuthenticated becomes true when user signs in`() = runTest(testDispatcher) {
-        val vm = createViewModel()
-
-        authRepository.signIn("test@example.com", "password123")
-        advanceUntilIdle()
-
-        assertTrue(vm.isAuthenticated.value == true)
-    }
+            assertNull(vm.isAuthenticated.value)
+        }
 
     @Test
-    fun `isAuthenticated becomes false when user signs out`() = runTest(testDispatcher) {
-        authRepository.signIn("test@example.com", "password123")
-        advanceUntilIdle()
+    fun `isAuthenticated becomes true when user signs in`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
 
-        val vm = createViewModel()
-        advanceUntilIdle()
-        assertTrue(vm.isAuthenticated.value == true)
+            authRepository.signIn("test@example.com", "password123")
+            advanceUntilIdle()
 
-        authRepository.signOut()
-        advanceUntilIdle()
-
-        assertTrue(vm.isAuthenticated.value == false)
-    }
+            assertTrue(vm.isAuthenticated.value == true)
+        }
 
     @Test
-    fun `isAuthenticated stays null when no auth state emission`() = runTest(testDispatcher) {
-        val vm = createViewModel()
+    fun `isAuthenticated becomes false when user signs out`() =
+        runTest(testDispatcher) {
+            authRepository.signIn("test@example.com", "password123")
+            advanceUntilIdle()
 
-        assertNull(vm.isAuthenticated.value)
-    }
+            val vm = createViewModel()
+            advanceUntilIdle()
+            assertTrue(vm.isAuthenticated.value == true)
+
+            authRepository.signOut()
+            advanceUntilIdle()
+
+            assertTrue(vm.isAuthenticated.value == false)
+        }
+
+    @Test
+    fun `isAuthenticated stays null when no auth state emission`() =
+        runTest(testDispatcher) {
+            val vm = createViewModel()
+
+            assertNull(vm.isAuthenticated.value)
+        }
 }
 
 // ===== Stub implementations =====
@@ -100,54 +103,157 @@ private class FakeVaultRemoteDataSource : VaultRemoteDataSource() {
 }
 
 private class FakeTransactionRemoteDataSource : TransactionRemoteDataSource() {
-    override fun observeNonDeletedTransactions(workspaceId: String, vaultId: String): Flow<List<Transaction>> = flowOf(emptyList())
-    override fun observeAllTransactions(workspaceId: String, vaultId: String): Flow<List<Transaction>> = flowOf(emptyList())
-    override suspend fun createTransaction(workspaceId: String, vaultId: String, transaction: Transaction, createdBy: String) {}
-    override suspend fun softDeleteTransaction(workspaceId: String, vaultId: String, transactionId: String) {}
+    override fun observeNonDeletedTransactions(
+        workspaceId: String,
+        vaultId: String,
+    ): Flow<List<Transaction>> = flowOf(emptyList())
+
+    override fun observeAllTransactions(
+        workspaceId: String,
+        vaultId: String,
+    ): Flow<List<Transaction>> = flowOf(emptyList())
+
+    override suspend fun createTransaction(
+        workspaceId: String,
+        vaultId: String,
+        transaction: Transaction,
+        createdBy: String,
+    ) {}
+
+    override suspend fun softDeleteTransaction(
+        workspaceId: String,
+        vaultId: String,
+        transactionId: String,
+    ) {}
 }
 
 private class FakeWorkspaceDao : WorkspaceDao {
     private val data = mutableMapOf<String, WorkspaceEntity>()
-    override suspend fun insert(workspace: WorkspaceEntity) { data[workspace.id] = workspace }
-    override suspend fun insertAll(workspaces: List<WorkspaceEntity>) { workspaces.forEach { insert(it) } }
-    override suspend fun update(workspace: WorkspaceEntity) { data[workspace.id] = workspace }
-    override suspend fun delete(workspace: WorkspaceEntity) { data.remove(workspace.id) }
+
+    override suspend fun insert(workspace: WorkspaceEntity) {
+        data[workspace.id] = workspace
+    }
+
+    override suspend fun insertAll(workspaces: List<WorkspaceEntity>) {
+        workspaces.forEach { insert(it) }
+    }
+
+    override suspend fun update(workspace: WorkspaceEntity) {
+        data[workspace.id] = workspace
+    }
+
+    override suspend fun delete(workspace: WorkspaceEntity) {
+        data.remove(workspace.id)
+    }
+
     override fun getAllWorkspaces(): Flow<List<WorkspaceEntity>> = flowOf(data.values.toList())
+
     override suspend fun getWorkspaceById(id: String): WorkspaceEntity? = data[id]
+
     override suspend fun getUnsyncedWorkspaces(): List<WorkspaceEntity> = data.values.filter { !it.synced }
-    override suspend fun getWorkspaceIdsWithEmptyMemberIds(emptyList: String): List<String> = data.values.filter { it.memberIds.isEmpty() }.map { it.id }
 }
 
 private class FakeVaultDao : VaultDao {
     private val data = mutableMapOf<String, VaultEntity>()
-    override suspend fun insert(vault: VaultEntity) { data[vault.id] = vault }
-    override suspend fun update(vault: VaultEntity) { data[vault.id] = vault }
-    override suspend fun delete(vault: VaultEntity) { data.remove(vault.id) }
+
+    override suspend fun insert(vault: VaultEntity) {
+        data[vault.id] = vault
+    }
+
+    override suspend fun update(vault: VaultEntity) {
+        data[vault.id] = vault
+    }
+
+    override suspend fun delete(vault: VaultEntity) {
+        data.remove(vault.id)
+    }
+
     override fun getVaultsByWorkspaceId(workspaceId: String): Flow<List<VaultEntity>> = flowOf(data.values.filter { it.workspaceId == workspaceId })
+
     override suspend fun getVaultById(id: String): VaultEntity? = data[id]
-    override suspend fun updateBalance(id: String, balance: Long) { data[id]?.let { data[id] = it.copy(balance = balance) } }
+
+    override suspend fun getUnsyncedVaults(): List<VaultEntity> = data.values.filter { !it.synced }
+
+    override suspend fun updateBalance(
+        id: String,
+        balance: Long,
+    ) {
+        data[id]?.let { data[id] = it.copy(balance = balance) }
+    }
 }
 
 private class FakeTransactionDao : TransactionDao {
     private val data = mutableMapOf<String, TransactionEntity>()
-    override suspend fun insert(transaction: TransactionEntity) { data[transaction.id] = transaction }
-    override suspend fun insertAll(transactions: List<TransactionEntity>) { transactions.forEach { insert(it) } }
-    override suspend fun update(transaction: TransactionEntity) { data[transaction.id] = transaction }
-    override suspend fun delete(transaction: TransactionEntity) { data.remove(transaction.id) }
-    override suspend fun deleteById(id: String) { data.remove(id) }
-    override fun getTransactionsByVaultId(vaultId: String): Flow<List<TransactionEntity>> = flowOf(data.values.filter { it.vaultId == vaultId })
-    override suspend fun getTransactionById(id: String): TransactionEntity? = data[id]
-    override suspend fun getTransactionIdsByVaultId(vaultId: String): List<String> = data.values.filter { it.vaultId == vaultId }.map { it.id }
-    override suspend fun getUnsyncedTransactions(): List<TransactionEntity> = data.values.filter { !it.synced }
-    override fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>> {
-        val lowerQuery = query.lowercase()
-        return flowOf(data.values.filter { it.vaultId == vaultId }
-            .filter { it.description.lowercase().contains(lowerQuery) || it.amount.toString().contains(lowerQuery) }
-            .sortedByDescending { it.createdAt })
+
+    override suspend fun insert(transaction: TransactionEntity) {
+        data[transaction.id] = transaction
     }
-    override suspend fun getBalanceForVault(vaultId: String): Long = data.values.filter { it.vaultId == vaultId }.sumOf { if (it.type == com.vaultledger.domain.model.TransactionType.INFLOW) it.amount else -it.amount }
+
+    override suspend fun insertAll(transactions: List<TransactionEntity>) {
+        transactions.forEach { insert(it) }
+    }
+
+    override suspend fun update(transaction: TransactionEntity) {
+        data[transaction.id] = transaction
+    }
+
+    override suspend fun delete(transaction: TransactionEntity) {
+        data.remove(transaction.id)
+    }
+
+    override suspend fun deleteById(id: String) {
+        data.remove(id)
+    }
+
+    override fun getTransactionsByVaultId(vaultId: String): Flow<List<TransactionEntity>> = flowOf(data.values.filter { it.vaultId == vaultId })
+
+    override suspend fun getTransactionById(id: String): TransactionEntity? = data[id]
+
+    override suspend fun getTransactionIdsByVaultId(vaultId: String): List<String> = data.values.filter { it.vaultId == vaultId }.map { it.id }
+
+    override suspend fun getUnsyncedTransactions(): List<TransactionEntity> = data.values.filter { !it.synced }
+
+    override fun searchTransactions(
+        vaultId: String,
+        query: String,
+    ): Flow<List<TransactionEntity>> = searchTransactionsInternal(vaultId, query.trim())
+
+    override fun searchTransactionsInternal(
+        vaultId: String,
+        query: String,
+    ): Flow<List<TransactionEntity>> {
+        val lowerQuery = query.lowercase()
+        return flowOf(
+            data.values
+                .filter { it.vaultId == vaultId }
+                .filter { it.description.lowercase().contains(lowerQuery) || it.amount.toString().contains(lowerQuery) }
+                .sortedByDescending { it.createdAt },
+        )
+    }
+
+    override suspend fun getBalanceForVault(vaultId: String): Long =
+        data.values.filter { it.vaultId == vaultId }.sumOf {
+            if (it.type ==
+                com.vaultledger.domain.model.TransactionType.INFLOW
+            ) {
+                it.amount
+            } else {
+                -it.amount
+            }
+        }
+
     override fun observeBalanceForVault(vaultId: String): Flow<Long> = flowOf(getBalanceForVaultSuspend(vaultId))
-    private fun getBalanceForVaultSuspend(vaultId: String): Long = data.values.filter { it.vaultId == vaultId }.sumOf { if (it.type == com.vaultledger.domain.model.TransactionType.INFLOW) it.amount else -it.amount }
+
+    private fun getBalanceForVaultSuspend(vaultId: String): Long =
+        data.values.filter { it.vaultId == vaultId }.sumOf {
+            if (it.type ==
+                com.vaultledger.domain.model.TransactionType.INFLOW
+            ) {
+                it.amount
+            } else {
+                -it.amount
+            }
+        }
 }
 
 class FakeSyncManager(
@@ -158,17 +264,20 @@ class FakeSyncManager(
     vaultDao: VaultDao = FakeVaultDao(),
     transactionDao: TransactionDao = FakeTransactionDao(),
 ) : SyncManager(
-    workspaceRemoteDataSource,
-    vaultRemoteDataSource,
-    transactionRemoteDataSource,
-    workspaceDao,
-    vaultDao,
-    transactionDao,
-) {
+        workspaceRemoteDataSource,
+        vaultRemoteDataSource,
+        transactionRemoteDataSource,
+        workspaceDao,
+        vaultDao,
+        transactionDao,
+    ) {
     var syncing = false
     var uid: String? = null
 
-    override fun startSyncing(uid: String, retryUnsynced: Boolean) {
+    override fun startSyncing(
+        uid: String,
+        retryUnsynced: Boolean,
+    ) {
         syncing = true
         this.uid = uid
     }

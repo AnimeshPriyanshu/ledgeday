@@ -33,6 +33,4 @@ interface WorkspaceDao {
     @Query("SELECT * FROM workspaces WHERE synced = 0")
     suspend fun getUnsyncedWorkspaces(): List<WorkspaceEntity>
 
-    @Query("SELECT id FROM workspaces WHERE memberIds = :emptyList")
-    suspend fun getWorkspaceIdsWithEmptyMemberIds(emptyList: String = "[]"): List<String>
 }

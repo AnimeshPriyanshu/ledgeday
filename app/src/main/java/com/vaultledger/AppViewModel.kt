@@ -1,10 +1,11 @@
 package com.vaultledger
 
-import android.util.Log
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vaultledger.data.sync.SyncManager
 import com.vaultledger.domain.repository.AuthRepository
+import com.vaultledger.sync.SyncWorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import javax.inject.Inject
 class AppViewModel @Inject constructor(
     authRepository: AuthRepository,
     private val syncManager: SyncManager,
+    private val application: Application? = null,
 ) : ViewModel() {
 
     private val _isAuthenticated = MutableStateFlow<Boolean?>(null)
@@ -26,24 +28,23 @@ class AppViewModel @Inject constructor(
             authRepository.observeAuthState().collect { user ->
                 val uid = user?.id
                 if (uid != null) {
-                    Log.d(TAG, "Auth state: user=$uid, calling startSyncing")
                     syncManager.startSyncing(uid)
                 } else {
-                    Log.d(TAG, "Auth state: null user, calling stopSyncing")
                     syncManager.stopSyncing()
                 }
                 _isAuthenticated.value = uid != null
+                _isAuthenticated.value?.let { isAuth ->
+                    application?.let { ctx ->
+                        if (isAuth) SyncWorkScheduler.schedule(ctx)
+                        else SyncWorkScheduler.cancel(ctx)
+                    }
+                }
             }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        Log.d(TAG, "onCleared: stopping sync")
         syncManager.stopSyncing()
-    }
-
-    companion object {
-        private const val TAG = "AppViewModel"
     }
 }

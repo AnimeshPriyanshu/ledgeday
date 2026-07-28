@@ -11,6 +11,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.vaultledger.AppViewModel
 import com.vaultledger.feature.settings.AcceptInviteScreen
 import com.vaultledger.feature.settings.InviteScreen
@@ -163,8 +164,22 @@ fun AppNavGraph(navController: NavHostController) {
         }
 
         // Accept Invite
-        composable(Routes.ACCEPT_INVITE) {
+        composable(
+            route = Routes.ACCEPT_INVITE,
+            arguments = listOf(
+                navArgument(Routes.ARG_INVITE_CODE) {
+                    type = NavType.StringType
+                    defaultValue = null
+                    nullable = true
+                },
+            ),
+            deepLinks = listOf(
+                navDeepLink { uriPattern = Routes.DEEP_LINK_ACCEPT_INVITE },
+            ),
+        ) { backStackEntry ->
+            val deepLinkCode = backStackEntry.arguments?.getString(Routes.ARG_INVITE_CODE)
             AcceptInviteScreen(
+                initialCode = deepLinkCode,
                 onNavigateToWorkspaces = {
                     navController.navigate(Routes.WORKSPACES) {
                         popUpTo(Routes.WORKSPACES) { inclusive = true }

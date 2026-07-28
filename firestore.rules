@@ -188,17 +188,30 @@ service cloud.firestore {
           allow read: if isAuthenticated()
             && request.auth.uid in get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.memberIds;
 
-          // UPDATE: soft delete only — set deleted=true
+          // UPDATE: soft delete OR normal edit
           allow update: if isAuthenticated()
             && request.auth.uid in get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.memberIds
-            && request.resource.data.deleted == true
-            && resource.data.deleted == false
             && request.resource.data.vaultId == resource.data.vaultId
-            && request.resource.data.type == resource.data.type
-            && request.resource.data.amount == resource.data.amount
-            && request.resource.data.description == resource.data.description
-            && request.resource.data.createdBy == resource.data.createdBy
-            && request.resource.data.createdAt == resource.data.createdAt;
+            && (
+              // Soft-delete path: mark as deleted, immutable fields unchanged
+              (request.resource.data.deleted == true
+                && resource.data.deleted == false
+                && request.resource.data.type == resource.data.type
+                && request.resource.data.amount == resource.data.amount
+                && request.resource.data.description == resource.data.description
+                && request.resource.data.createdBy == resource.data.createdBy
+                && request.resource.data.createdAt == resource.data.createdAt)
+              ||
+              // Edit path: modify mutable fields, deleted remains false
+              (request.resource.data.deleted == false
+                && request.resource.data.type in ['INFLOW', 'OUTFLOW']
+                && request.resource.data.amount is number
+                && request.resource.data.amount > 0
+                && request.resource.data.description is string
+                && request.resource.data.description.size() <= 500
+                && request.resource.data.createdBy == resource.data.createdBy
+                && request.resource.data.createdAt == resource.data.createdAt)
+            );
 
           // DELETE: HARD DELETE IS FORBIDDEN — use soft delete only
           allow delete: if false;

@@ -39,6 +39,11 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE synced = 0")
     suspend fun getUnsyncedTransactions(): List<TransactionEntity>
 
+    fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>> {
+        val trimmed = query.trim()
+        return searchTransactionsInternal(vaultId, trimmed)
+    }
+
     @Query(
         """
         SELECT t.* FROM transactions t
@@ -52,7 +57,7 @@ interface TransactionDao {
         ORDER BY t.createdAt DESC
         """
     )
-    fun searchTransactions(vaultId: String, query: String): Flow<List<TransactionEntity>>
+    fun searchTransactionsInternal(vaultId: String, query: String): Flow<List<TransactionEntity>>
 
     @Query(
         """

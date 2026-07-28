@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.vaultledger.domain.model.TransactionType
 import com.vaultledger.ui.common.ContentDescriptions
+import com.vaultledger.ui.common.Dimensions
 import com.vaultledger.ui.common.ErrorState
 import com.vaultledger.ui.common.LocalSnackbarHostState
 import com.vaultledger.ui.common.LoadingState
@@ -220,7 +221,7 @@ fun TransactionFormScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
+                    .padding(Dimensions.SpacingLarge),
             ) {
 
                 // Amount field

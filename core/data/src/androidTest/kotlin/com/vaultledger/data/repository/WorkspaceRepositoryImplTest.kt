@@ -28,7 +28,10 @@ class WorkspaceRepositoryImplTest {
         database = Room.inMemoryDatabaseBuilder(context, VaultLedgerDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        repository = WorkspaceRepositoryImpl(database.workspaceDao())
+        repository = WorkspaceRepositoryImpl(
+            workspaceDao = database.workspaceDao(),
+            database = database,
+        )
     }
 
     @After

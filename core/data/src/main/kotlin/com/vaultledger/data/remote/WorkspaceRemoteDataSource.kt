@@ -63,6 +63,31 @@ open class WorkspaceRemoteDataSource @Inject constructor() {
             }
     }
 
+    open suspend fun deleteWorkspace(workspaceId: String) = kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+        firestore.collection(FirestoreConstants.COLLECTION_WORKSPACES)
+            .document(workspaceId)
+            .delete()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) cont.resume(Unit)
+                else cont.resumeWithException(task.exception ?: RuntimeException("Failed to delete workspace"))
+            }
+    }
+
+    open suspend fun updateWorkspace(workspace: Workspace) = kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+        val data = mapOf(
+            FirestoreConstants.FIELD_NAME to workspace.name,
+            FirestoreConstants.FIELD_DESCRIPTION to workspace.description,
+            FirestoreConstants.FIELD_UPDATED_AT to System.currentTimeMillis(),
+        )
+        firestore.collection(FirestoreConstants.COLLECTION_WORKSPACES)
+            .document(workspace.id)
+            .update(data)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) cont.resume(Unit)
+                else cont.resumeWithException(task.exception ?: RuntimeException("Failed to update workspace"))
+            }
+    }
+
     private fun DocumentSnapshot.toWorkspace(): Workspace? {
         if (!exists()) return null
         return Workspace(

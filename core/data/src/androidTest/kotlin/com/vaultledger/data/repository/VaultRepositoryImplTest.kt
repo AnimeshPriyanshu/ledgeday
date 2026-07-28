@@ -28,7 +28,10 @@ class VaultRepositoryImplTest {
         database = Room.inMemoryDatabaseBuilder(context, VaultLedgerDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        repository = VaultRepositoryImpl(database.vaultDao())
+        repository = VaultRepositoryImpl(
+            vaultDao = database.vaultDao(),
+            database = database,
+        )
         seedWorkspace()
     }
 

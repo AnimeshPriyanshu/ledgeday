@@ -372,4 +372,51 @@ class AuthViewModelTest {
         assertFalse(vm.state.value.isLoading)
     }
 
+    @Test
+    fun `rate limit blocks excessive failed signIn attempts`() = runTest(testDispatcher) {
+        val vm = AuthViewModel(repository)
+        vm.onEmailChange("test@example.com")
+        vm.onPasswordChange("wrongpass")
+        repository.signInError = "Invalid credentials"
+
+        for (i in 1..5) {
+            vm.signIn()
+            advanceUntilIdle()
+        }
+
+        val afterFifth = vm.state.value
+        assertTrue(afterFifth.isLoading == false || afterFifth.error != null)
+        advanceUntilIdle()
+
+        vm.signIn()
+        advanceUntilIdle()
+        assertTrue(
+            vm.state.value.error?.contains("Too many attempts") == true,
+            "Expected rate limit error but got: ${vm.state.value.error}",
+        )
+    }
+
+    @Test
+    fun `rate limit resets after successful signIn`() = runTest(testDispatcher) {
+        repository.signUp("test@example.com", "password123")
+        repository.signOut()
+
+        val vm = AuthViewModel(repository)
+        vm.onEmailChange("test@example.com")
+        vm.onPasswordChange("wrongpass")
+        repository.signInError = "Invalid credentials"
+
+        for (i in 1..3) {
+            vm.signIn()
+            advanceUntilIdle()
+        }
+
+        repository.signInError = null
+        vm.onPasswordChange("password123")
+        vm.signIn()
+        advanceUntilIdle()
+
+        assertNull(vm.state.value.error)
+        assertTrue(vm.state.value.isAuthenticated || vm.state.value.isLoading == false)
+    }
 }

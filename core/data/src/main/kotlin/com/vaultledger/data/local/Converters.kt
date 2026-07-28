@@ -9,7 +9,11 @@ class Converters {
     fun fromTransactionType(value: TransactionType): String = value.name
 
     @TypeConverter
-    fun toTransactionType(value: String): TransactionType = TransactionType.valueOf(value)
+    fun toTransactionType(value: String): TransactionType = try {
+        TransactionType.valueOf(value)
+    } catch (_: IllegalArgumentException) {
+        TransactionType.INFLOW
+    }
 
     @TypeConverter
     fun fromStringList(value: List<String>): String = JSONArray(value).toString()
