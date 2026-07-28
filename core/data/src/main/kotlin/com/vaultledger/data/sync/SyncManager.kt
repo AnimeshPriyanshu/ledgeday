@@ -171,7 +171,8 @@ open class SyncManager @Inject constructor(
         }
     }
 
-    private suspend fun retryUnsyncedTransactions() {
+    @VisibleForTesting
+    internal suspend fun retryUnsyncedTransactions() {
         val unsynced = transactionDao.getUnsyncedTransactions()
         if (unsynced.isNotEmpty()) {
             Log.d(TAG, "retryUnsynced: ${unsynced.size} unsynced transaction(s)")
@@ -180,10 +181,26 @@ open class SyncManager @Inject constructor(
             try {
                 val vault = vaultDao.getVaultById(entity.vaultId) ?: continue
                 val workspaceId = vault.workspaceId
+
+                val current = transactionDao.getTransactionById(entity.id)
+                if (current == null) {
+                    Log.d(TAG, "retryUnsynced: entity ${entity.id} was deleted before write, skipping")
+                    continue
+                }
+
                 transactionRemoteDataSource.createTransaction(
                     workspaceId, entity.vaultId, entity.toDomain(), entity.createdBy,
                 )
-                transactionDao.insert(entity.copy(synced = true))
+
+                val stillExists = transactionDao.getTransactionById(entity.id)
+                if (stillExists != null) {
+                    transactionDao.insert(entity.copy(synced = true))
+                } else {
+                    Log.d(TAG, "retryUnsynced: entity ${entity.id} deleted during write, compensating")
+                    transactionRemoteDataSource.softDeleteTransaction(
+                        workspaceId, entity.vaultId, entity.id,
+                    )
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
