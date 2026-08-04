@@ -210,7 +210,7 @@ open class SyncManager @Inject constructor(
             workspaces.forEach { workspaceDao.insert(it.toWorkspaceEntity()) }
 
             val existing = workspaceDao.getAllWorkspaces().first()
-            val removedWorkspaces = existing.filter { it.id !in incomingIds }
+            val removedWorkspaces = existing.filter { it.synced && it.id !in incomingIds }
             removedWorkspaces.forEach { workspaceDao.delete(it) }
 
             val toStart = incomingIds - syncedIds
